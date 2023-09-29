@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+
+<html>
+
+    {% include 'static/head.html' %}
+
+    <body>
+
+        {% include 'static/header.html' %}
+
+        <div class="container">
+            <div class="card border-danger">
+                <div class="card-header">Ошибка!</div>
+                <div class="card-body">{{msg}}</div>
+            </div>
+        </div>
+
+        {% include 'static/footer.html' %}
+
+    </body>
+
+</html>
