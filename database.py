@@ -1,6 +1,5 @@
 from datetime import datetime
 import mysql.connector as mysql
-from flask.sessions import SessionMixin
 
 class User:
 
@@ -9,7 +8,7 @@ class User:
         self.username = username
         self.first_name = first_name
         self.last_name = last_name
-    
+
     @property
     def name(self):
         return f'{self.first_name} {self.last_name}' if self.last_name else self.first_name
@@ -23,13 +22,11 @@ class DBHelper:
 
     def __init__(self, host: str, user: str, password: str, database: str, recreate: bool = False) -> None:
 
-        self.__database = mysql.connect(host=host, user=user, password=password, database=database)
-        self.__database.autocommit = True
+        self.__database = mysql.connect(host=host, user=user, password=password, database=database, autocommit=True)
 
         if recreate:
-            cursor = self.__database.cursor()
-            cursor.executemany('DROP TABLE IF EXISTS %s', (DBHelper.__TABLE_USERS, DBHelper.__TABLE_BOOKS, DBHelper.__TABLE_NOTES))
-            cursor.close()
+            with self.__database.cursor() as cursor:
+                cursor.executemany('DROP TABLE IF EXISTS %s', (DBHelper.__TABLE_USERS, DBHelper.__TABLE_BOOKS, DBHelper.__TABLE_NOTES))
 
         with self.__database.cursor() as cursor:
             cursor.execute(f'CREATE TABLE IF NOT EXISTS {DBHelper.__TABLE_USERS} (`id` INT NOT NULL AUTO_INCREMENT,   `username` VARCHAR(32),      `first_name` VARCHAR(64) NOT NULL,    `last_name` VARCHAR(64),         PRIMARY KEY (`id`))')
@@ -45,19 +42,15 @@ class DBHelper:
         auth_date = int(auth_date)
         id = int(id)
 
-        d = datetime.utcnow().timestamp() - auth_date
-        if d > 3600:
+        if datetime.utcnow().timestamp() - auth_date > 3600:
             return None
 
         try:
-
             with self.__database.cursor() as cursor:
                 cursor.execute(f'SELECT * FROM {DBHelper.__TABLE_USERS} WHERE `id` = %s', (id, ))
                 result = cursor.fetchone()
-
-            if (result):
+            if result:
                 return User(result[0], result[1], result[2], result[3])
-
         except:
             return None
 
@@ -66,7 +59,7 @@ class DBHelper:
                 cursor.execute(f'INSERT INTO {DBHelper.__TABLE_USERS} VALUES (%s, %s, %s, %s)', (id, data.get('username', None), first_name, data.get('last_name', None)))
         except:
             return None
-        
+
         return User(id, data.get('username', None), first_name, data.get('last_name', None))
 
 
@@ -74,7 +67,8 @@ class DBHelper:
         try:
             with self.__database.cursor() as cursor:
                 cursor.execute(f'SELECT COUNT(*) FROM {DBHelper.__TABLE_NOTES}')
-                count = cursor.fetchone()[0]
+                result = cursor.fetchone()
+                count = result[0] if result else 0
             return count
         except:
             return 0
@@ -84,7 +78,8 @@ class DBHelper:
         try:
             with self.__database.cursor() as cursor:
                 cursor.execute(f'SELECT COUNT(*) FROM {DBHelper.__TABLE_NOTES} WHERE `author_id` = %s', (user_id, ))
-                count = cursor.fetchone()[0]
+                result = cursor.fetchone()
+                count = result[0] if result else 0
             return count
         except:
             return 0
@@ -94,14 +89,14 @@ class DBHelper:
         try:
             with self.__database.cursor() as cursor:
                 cursor.execute(f'SELECT COUNT(*) FROM {DBHelper.__TABLE_BOOKS} WHERE `owner_id` = %s', (user_id, ))
-                count = cursor.fetchone()[0]
+                result = cursor.fetchone()
+                count = result[0] if result else 0
             return count
         except:
             return 0
 
 
     def get_books(self, user_id: int) -> list | None:
-
         try:
             with self.__database.cursor() as cursor:
                 cursor.execute(f'SELECT * FROM {DBHelper.__TABLE_BOOKS} WHERE `owner_id` = %s ORDER BY `title`', (user_id, ))
@@ -109,28 +104,36 @@ class DBHelper:
         except:
             return None
 
-        result = []
+        books: list[tuple[int, str, int]] = []
 
         for book in books_result:
             try:
                 with self.__database.cursor() as cursor:
                     cursor.execute(f'SELECT COUNT(*) FROM {DBHelper.__TABLE_NOTES} WHERE `author_id` = %s AND `book_id` = %s', (user_id, book[0]))
-                    notes_count = cursor.fetchone()[0]
+                    result = cursor.fetchone()
+                    count = result[0] if result else 0
             except:
                 return None
+            books.append((book[0], book[2], count))
 
-            result.append((book[0], book[2], notes_count))
-
-        return result
+        return books
 
 
     def create_book(self, owner_id: int, title: str) -> bool:
         try:
             with self.__database.cursor() as cursor:
-                cursor.execute('INSERT INTO `books` (`owner_id`, `title`) VALUES (%s, %s)', (owner_id, title))
+                cursor.execute(f'INSERT INTO {DBHelper.__TABLE_BOOKS} (`owner_id`, `title`) VALUES (%s, %s)', (owner_id, title))
         except:
             return False
+        return True
 
+
+    def delete_book(self, owner_id: int, book_id: int) -> bool:
+        try:
+            with self.__database.cursor() as cursor:
+                cursor.execute(f'DELETE FROM {DBHelper.__TABLE_BOOKS} WHERE `owner_id` = %s AND `id` = %s', (owner_id, book_id))
+        except:
+            return False
         return True
 
 

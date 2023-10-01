@@ -1,31 +1,17 @@
-<!DOCTYPE html>
+{% extends "base.html" %}
 
-<html>
+{% block content %}
 
-    {% include 'static/head.html' %}
+{% if user %}
+<div class="card">
+    <div class="card-header">Привет, {{user.name}}</div>
+    <div class="card-body">Ник: {{user.username}}, ID: {{user.id}}</div>
+</div>
+{% else %}
+<div class="card">
+    <div class="card-header">Добро пожаловать</div>
+    <div class="card-body">Войдите в свою учётную запись с помощью Telegram и вы сможете бла-бла-бла. Сервис насчитывает уже целых {{total_notes_count}} заметок</div>
+</div>
+{% endif %}
 
-    <body>
-
-        {% include 'static/header.html' %}
-
-        <div class="container">
-
-            {% if user %}
-            <div class="card">
-                <div class="card-header">Привет, {{user.name}}</div>
-                <div class="card-body">Ник: {{user.username}}, Твой ID: {{user.id}}</div>
-            </div>
-            {% else %}
-            <div class="card">
-                <div class="card-header">Добро пожаловать</div>
-                <div class="card-body">Войдите в свою учётную запись с помощью Telegram и вы сможете бла-бла-бла. Сервис насчитывает уже целых {{notes_count}} заметок</div>
-            </div>
-            {% endif %}
-
-        </div>
-
-        {% include 'static/footer.html' %}
-
-    </body>
-
-</html>
+{% endblock %}

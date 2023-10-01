@@ -1,47 +1,34 @@
-<!DOCTYPE html>
+{% extends "base.html" %}
 
-<html>
+{% block content %}
 
-    {% include 'static/head.html' %}
-
-    <body>
-
-        {% include 'static/header.html' %}
-
-        <div class="container">
-
-            <div class="card">
-                <div class="card-header">Создать новую записную книжку</div>
-                <form method="post" action="/books">
-                    <div class="card-body">
-                        <input type="text" class="form-control" name="title" required placeholder="Название">
-                    </div>
-                    <div class="card-footer d-flex justify-content-end justify-content-md-start">
-                        <input type="submit" class="btn btn-success btn-disabled" value="Создать">
-                    </div>
-                </form>
-            </div>
-
-            {% if not books %}
-            <div class="d-flex justify-content-center mt-4 text-secondary fst-italic">У вас пока ещё нет ни одной записной книжки</div>
-            {% else %}
-                {% for i in books %}
-                    <div class="card mt-4">
-                        <div class="card-header">{{i[1]}} <span class="fst-italic text-secondary">book_id: {{i[0]}}</span></div>
-                        <div class="card-body">Заметок: {{i[2]}}</div>
-                        <div class="card-footer d-flex justify-content-end">
-                            <form method="post" action="/book-delete">
-                                <input type="submit" class="btn btn-outline-danger" disabled value="Удалить (ещё не сделал)">
-                            </form>
-                        </div>
-                    </div>
-                {% endfor %}
-            {% endif %}
-
+<div class="card">
+    <div class="card-header">Создать новую записную книжку</div>
+    <form method="post" action="/create-book">
+        <div class="card-body">
+            <input type="text" class="form-control" name="title" required placeholder="Название">
         </div>
+        <div class="card-footer d-flex justify-content-end justify-content-md-start">
+            <input type="submit" class="btn btn-success btn-disabled" value="Создать">
+        </div>
+    </form>
+</div>
 
-        {% include 'static/footer.html' %}
+{% if not books %}
+<div class="d-flex justify-content-center mt-4 text-secondary fst-italic">У вас пока ещё нет ни одной записной книжки</div>
+{% else %}
+{% for i in books %}
+<div class="card mt-4">
+    <div class="card-header">{{i[1]}}</div>
+    <div class="card-body">Заметок: {{i[2]}}</div>
+    <div class="card-footer d-flex justify-content-end">
+        <form method="post" action="/delete-book">
+            <input type="hidden" name="id" value="{{i[0]}}">
+            <input type="submit" class="btn btn-outline-danger" value="Удалить">
+        </form>
+    </div>
+</div>
+{% endfor %}
+{% endif %}
 
-    </body>
-
-</html>
+{% endblock %}

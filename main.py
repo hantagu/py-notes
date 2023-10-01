@@ -1,22 +1,25 @@
 import os
 import hmac
 import hashlib
+from collections.abc import Callable
 
 from ssl import SSLContext, PROTOCOL_TLS_SERVER
 
-import mysql.connector as mysql
-from flask import Flask, Response, request, session, redirect, render_template, abort, url_for
+from flask import Flask, Response, make_response, redirect, render_template, url_for, request, session
 
-from database import DBHelper
+from database import DBHelper, User
 
 
 PAGE_ERROR = 'error'
 
 PAGE_MAIN = 'main'
-PAGE_BOOKS = 'books'
 
-PAGE_LOGIN = 'login'
-PAGE_LOGOUT = 'logout'
+PAGE_BOOKS = 'books'
+METHOD_CREATE_BOOK = 'create-book'
+METHOD_DELETE_BOOK = 'delete-book'
+
+METHOD_LOGIN = 'login'
+METHOD_LOGOUT = 'logout'
 
 
 app = Flask(__name__)
@@ -32,29 +35,50 @@ ctx.load_cert_chain(certfile=f'./tls/{os.environ["LISTEN_ADDR"]}.crt', keyfile=f
 database = DBHelper(os.environ['MYSQL_HOST'], os.environ['MYSQL_USER'], os.environ['MYSQL_PASSWD'], os.environ['MYSQL_DATABASE'])
 
 
-def error(msg: str) -> Response:
-    return redirect(url_for('error_page', msg=msg))
+def template(view_name: str, user: User | None, **kwargs) -> Response:
+    resp = make_response(render_template(f'{view_name}.html', page=view_name, user=user, **kwargs))
+    return resp
 
-@app.get('/error')
-def error_page():
-    return render_template(f'{PAGE_ERROR}.html', msg=request.args.get('msg', 'Неизвестная ошибка'))
+
+def auth(f: Callable[[], tuple[Callable[[User], Response], Callable[[], Response]]]) -> Callable[[], Response]:
+    def inner() -> Response:
+        user = database.auth(session) # type: ignore
+        return f()[0](user) if user else f()[1]()
+    inner.__name__ = f.__name__
+    return inner
 
 
 @app.get('/')
-def main_page():
+@auth
+def main() -> tuple[Callable[[User], Response], Callable[[], Response]]:
 
-    if not (user := database.auth(session)):
-        session.clear()
-        return render_template(f'{PAGE_MAIN}.html', page=PAGE_MAIN, user=None, notes_count=database.total_notes_count())
+    def ok(user: User) -> Response:
+        return template(PAGE_MAIN, user)
 
-    return render_template(f'{PAGE_MAIN}.html', page=PAGE_MAIN, user=user)
+    def err() -> Response:
+        return template(PAGE_MAIN, None, total_notes_count=database.total_notes_count())
+
+    return ok, err
 
 
-@app.get(f'/{PAGE_LOGIN}')
-def login_page():
+@app.get('/error')
+@auth
+def error() -> tuple[Callable[[User], Response], Callable[[], Response]]:
+
+    def ok(user: User) -> Response:
+        return template(PAGE_ERROR, user, msg=request.args.get('msg', 'Неизвестная ошибка'))
+
+    def err() -> Response:
+        return template(PAGE_ERROR, None, msg=request.args.get('msg', 'Неизвестная ошибка'))
+
+    return ok, err
+
+
+@app.get(f'/{METHOD_LOGIN}')
+def login() -> Response:
 
     if not (tg_hash := request.args.get('hash')):
-        return error('Параметр `hash` отсутствует в ответе от Telegram')
+        return redirect(url_for(error.__name__, msg='Параметр `hash` отсутствует в ответе от Telegram')) # type: ignore
 
     sorted_args = [(k, v) for k, v in sorted(request.args.items(), key=lambda x: x[0]) if k != 'hash']
 
@@ -62,40 +86,65 @@ def login_page():
     secret_key = hashlib.sha256(bot_token.encode()).digest()
 
     if hmac.new(secret_key, data_check_string.encode(), hashlib.sha256).hexdigest() != tg_hash:
-        return error('Нарушена целостность данных, полученных от Telegram')
+        return redirect(url_for(error.__name__, msg='Нарушена целостность данных, полученных от Telegram')) # type: ignore
 
     for k, v in sorted_args:
         session[k] = v
 
-    return redirect(url_for('main_page'))
+    return redirect(url_for(main.__name__)) # type: ignore
 
 
-@app.get(f'/{PAGE_LOGOUT}')
-def logout_page():
+@app.get(f'/{METHOD_LOGOUT}')
+def logout() -> Response:
     session.clear()
-    return redirect(url_for('main_page'))
+    return redirect(url_for(main.__name__)) # type: ignore
 
 
 @app.get(f'/{PAGE_BOOKS}')
-def books_page():
+@auth
+def books() -> tuple[Callable[[User], Response], Callable[[], Response]]:
 
-    if not (user := database.auth(session)):
-        return redirect(url_for('main_page'))
+    def ok(user: User) -> Response:
+        return template(PAGE_BOOKS, user=user, books=database.get_books(user.id))
 
-    books = database.get_books(user.id)
+    def err() -> Response:
+        return redirect(url_for(main.__name__)) # type: ignore
 
-    return render_template(f'{PAGE_BOOKS}.html', page=PAGE_BOOKS, user=user, books=books)
-
-@app.post(f'/{PAGE_BOOKS}')
-def books_form():
-
-    if not all((owner_id := session.get('id', None), title := request.form.get('title', None))):
-        return error('Недостаточно аргументов')
-
-    if not database.create_book(owner_id, title):
-        return error('Ошибка обращения к БД')
-    
-    return redirect(url_for('books_page'))
+    return ok, err
 
 
-app.run(os.environ["LISTEN_ADDR"], 443, ssl_context=ctx)
+@app.post(f'/{METHOD_CREATE_BOOK}')
+@auth
+def create_book() -> tuple[Callable[[User], Response], Callable[[], Response]]:
+
+    def ok(user: User) -> Response:
+        if not (title := request.form.get('title', None)):
+            return redirect(url_for(error.__name__, msg='Недостаточно аргументов')) # type: ignore
+        if not database.create_book(user.id, title):
+            return redirect(url_for(error.__name__, msg='Ошибка обращения к БД')) # type: ignore
+        return redirect(url_for(books.__name__)) # type: ignore
+
+    def err() -> Response:
+        return redirect(url_for(main.__name__)) # type: ignore
+
+    return ok, err
+
+
+@app.post(f'/{METHOD_DELETE_BOOK}')
+@auth
+def delete_book():
+
+    def ok(user: User) -> Response:
+        if not (id := request.form.get('id')):
+            return redirect(url_for(error.__name__, msg='Недостаточно аргументов')) # type: ignore
+        if not database.delete_book(user.id, int(id)):
+            return redirect(url_for(error.__name__, msg='Ошибка обращения к БД')) # type: ignore
+        return redirect(url_for(books.__name__)) # type: ignore
+
+    def err() -> Response:
+        return redirect(url_for(main.__name__)) # type: ignore
+
+    return ok, err
+
+
+app.run(os.environ['LISTEN_ADDR'], 443, ssl_context=ctx)
