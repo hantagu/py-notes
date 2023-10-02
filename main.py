@@ -15,6 +15,7 @@ PAGE_ERROR = 'error'
 PAGE_MAIN = 'main'
 
 PAGE_BOOKS = 'books'
+PAGE_BOOK = 'book'
 METHOD_CREATE_BOOK = 'create-book'
 METHOD_DELETE_BOOK = 'delete-book'
 
@@ -40,16 +41,24 @@ def template(view_name: str, user: User | None, **kwargs) -> Response:
     return resp
 
 
-def auth(f: Callable[[], tuple[Callable[[User], Response], Callable[[], Response]]]) -> Callable[[], Response]:
-    def inner() -> Response:
+def auth_splitted(f: Callable[[], tuple[Callable[[User], Response], Callable[[], Response]]]) -> Callable[[], Response]:
+    def wrapper() -> Response:
         user = database.auth(session) # type: ignore
         return f()[0](user) if user else f()[1]()
-    inner.__name__ = f.__name__
-    return inner
+    wrapper.__name__ = f.__name__
+    return wrapper
+
+
+def auth_joined(f: Callable[[], Callable[[User | None], Response]]) -> Callable[[], Response]:
+    def wrapper() -> Response:
+        user = database.auth(session) # type: ignore
+        return f()(user)
+    wrapper.__name__ = f.__name__
+    return wrapper
 
 
 @app.get('/')
-@auth
+@auth_splitted
 def main() -> tuple[Callable[[User], Response], Callable[[], Response]]:
 
     def ok(user: User) -> Response:
@@ -62,16 +71,13 @@ def main() -> tuple[Callable[[User], Response], Callable[[], Response]]:
 
 
 @app.get('/error')
-@auth
-def error() -> tuple[Callable[[User], Response], Callable[[], Response]]:
+@auth_joined
+def error() -> Callable[[User | None], Response]:
 
-    def ok(user: User) -> Response:
+    def page(user: User | None) -> Response:
         return template(PAGE_ERROR, user, msg=request.args.get('msg', 'Неизвестная ошибка'))
 
-    def err() -> Response:
-        return template(PAGE_ERROR, None, msg=request.args.get('msg', 'Неизвестная ошибка'))
-
-    return ok, err
+    return page
 
 
 @app.get(f'/{METHOD_LOGIN}')
@@ -101,7 +107,7 @@ def logout() -> Response:
 
 
 @app.get(f'/{PAGE_BOOKS}')
-@auth
+@auth_splitted
 def books() -> tuple[Callable[[User], Response], Callable[[], Response]]:
 
     def ok(user: User) -> Response:
@@ -113,8 +119,24 @@ def books() -> tuple[Callable[[User], Response], Callable[[], Response]]:
     return ok, err
 
 
+# @app.get(f'/{PAGE_BOOK}')
+# @auth_splitted
+# def book() -> tuple[Callable[[User], Response], Callable[[], Response]]:
+
+#     def ok(user: User) -> Response:
+#         if (book_id := request.args.get('id')):
+#             return err()
+
+#         return template(PAGE_BOOK, user)
+
+#     def err() -> Response:
+#         return redirect(url_for(main.__name__)) # type: ignore
+
+#     return ok, err
+
+
 @app.post(f'/{METHOD_CREATE_BOOK}')
-@auth
+@auth_splitted
 def create_book() -> tuple[Callable[[User], Response], Callable[[], Response]]:
 
     def ok(user: User) -> Response:
@@ -131,7 +153,7 @@ def create_book() -> tuple[Callable[[User], Response], Callable[[], Response]]:
 
 
 @app.post(f'/{METHOD_DELETE_BOOK}')
-@auth
+@auth_splitted
 def delete_book():
 
     def ok(user: User) -> Response:
