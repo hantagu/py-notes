@@ -1,4 +1,5 @@
 .vscode/
 .local-venv/
+__pycache__/
 tls/
 .env
