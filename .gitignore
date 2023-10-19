@@ -1,5 +1,5 @@
 .vscode/
-.local-venv/
+.venv/
 __pycache__/
 tls/
 .env

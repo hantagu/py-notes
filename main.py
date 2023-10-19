@@ -15,9 +15,12 @@ PAGE_ERROR = 'error'
 PAGE_MAIN = 'main'
 
 PAGE_BOOKS = 'books'
-PAGE_BOOK = 'book'
 METHOD_CREATE_BOOK = 'create-book'
 METHOD_DELETE_BOOK = 'delete-book'
+
+PAGE_NOTES = 'notes'
+METHOD_CREATE_NOTE = 'create-note'
+METHOD_DELETE_NOTE = 'delete-note'
 
 METHOD_LOGIN = 'login'
 METHOD_LOGOUT = 'logout'
@@ -114,25 +117,9 @@ def books() -> tuple[Callable[[User], Response], Callable[[], Response]]:
         return template(PAGE_BOOKS, user=user, books=database.get_books(user.id))
 
     def err() -> Response:
-        return redirect(url_for(main.__name__)) # type: ignore
+        return redirect(url_for(error.__name__, msg='Ошибка аутентификации')) # type: ignore
 
     return ok, err
-
-
-# @app.get(f'/{PAGE_BOOK}')
-# @auth_splitted
-# def book() -> tuple[Callable[[User], Response], Callable[[], Response]]:
-
-#     def ok(user: User) -> Response:
-#         if (book_id := request.args.get('id')):
-#             return err()
-
-#         return template(PAGE_BOOK, user)
-
-#     def err() -> Response:
-#         return redirect(url_for(main.__name__)) # type: ignore
-
-#     return ok, err
 
 
 @app.post(f'/{METHOD_CREATE_BOOK}')
@@ -147,7 +134,7 @@ def create_book() -> tuple[Callable[[User], Response], Callable[[], Response]]:
         return redirect(url_for(books.__name__)) # type: ignore
 
     def err() -> Response:
-        return redirect(url_for(main.__name__)) # type: ignore
+        return redirect(url_for(error.__name__, msg='Ошибка аутентификации')) # type: ignore
 
     return ok, err
 
@@ -164,7 +151,50 @@ def delete_book():
         return redirect(url_for(books.__name__)) # type: ignore
 
     def err() -> Response:
-        return redirect(url_for(main.__name__)) # type: ignore
+        return redirect(url_for(error.__name__, msg='Ошибка аутентификации')) # type: ignore
+
+    return ok, err
+
+
+@app.get(f'/{PAGE_NOTES}')
+@auth_splitted
+def notes():
+
+    def ok(user: User) -> Response:
+        return template(PAGE_NOTES, user, notes=database.get_notes(user.id, int(request.args['id'])))
+
+    def err() -> Response:
+        return redirect(url_for(error.__name__, msg='Ошибка аутентификации')) # type: ignore
+
+    return ok, err
+
+
+@app.post(f'/{METHOD_CREATE_NOTE}')
+@auth_splitted
+def create_note():
+
+    def ok(user: User) -> Response:
+        if not all((book_id := request.args['book_id'], title := request.args['title'], text := request.args['text'])):
+            return redirect(url_for(error.__name__, msg='Недостаточно аргументов')) # type: ignore
+        if not database.create_note(user.id, int(book_id), title, text):
+            return redirect(url_for(error.__name__, msg='Ошибка обращения к БД')) # type: ignore
+        return redirect(url_for(notes.__name__, ))
+
+    def err() -> Response:
+        return redirect(url_for(error.__name__, msg='Ошибка аутентификации')) # type: ignore
+
+    return ok, err
+
+
+@app.post(f'/{METHOD_DELETE_NOTE}')
+@auth_splitted
+def delete_note():
+
+    def ok(user: User) -> Response:
+        pass
+
+    def err() -> Response:
+        return redirect(url_for(error.__name__, msg='Ошибка аутентификации')) # type: ignore
 
     return ok, err
 

@@ -29,9 +29,9 @@ class DBHelper:
                 cursor.executemany('DROP TABLE IF EXISTS %s', (DBHelper.__TABLE_USERS, DBHelper.__TABLE_BOOKS, DBHelper.__TABLE_NOTES))
 
         with self.__database.cursor() as cursor:
-            cursor.execute(f'CREATE TABLE IF NOT EXISTS {DBHelper.__TABLE_USERS} (`id` INT NOT NULL AUTO_INCREMENT,   `username` VARCHAR(32),      `first_name` VARCHAR(64) NOT NULL,    `last_name` VARCHAR(64),         PRIMARY KEY (`id`))')
-            cursor.execute(f'CREATE TABLE IF NOT EXISTS {DBHelper.__TABLE_BOOKS} (`id` INT NOT NULL AUTO_INCREMENT,   `owner_id` INT NOT NULL,     `title` VARCHAR(64) NOT NULL,                                          PRIMARY KEY (`id`), FOREIGN KEY (`owner_id`) REFERENCES `users` (`id`) ON DELETE CASCADE)')
-            cursor.execute(f'CREATE TABLE IF NOT EXISTS {DBHelper.__TABLE_NOTES} (`id` INT NOT NULL AUTO_INCREMENT,   `author_id` INT NOT NULL,    `book_id` INT NOT NULL,               `title` VARCHAR(64) NOT NULL,    PRIMARY KEY (`id`), FOREIGN KEY (`author_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,   FOREIGN KEY (`book_id`) REFERENCES `books` (`id`) ON DELETE CASCADE)')
+            cursor.execute(f'CREATE TABLE IF NOT EXISTS {DBHelper.__TABLE_USERS} (`id` INT NOT NULL AUTO_INCREMENT,   `username` VARCHAR(32),      `first_name` VARCHAR(64) NOT NULL,    `last_name` VARCHAR(64),                                 PRIMARY KEY (`id`))')
+            cursor.execute(f'CREATE TABLE IF NOT EXISTS {DBHelper.__TABLE_BOOKS} (`id` INT NOT NULL AUTO_INCREMENT,   `owner_id` INT NOT NULL,     `title` VARCHAR(64) NOT NULL,                                                                  PRIMARY KEY (`id`), FOREIGN KEY (`owner_id`) REFERENCES `users` (`id`) ON DELETE CASCADE)')
+            cursor.execute(f'CREATE TABLE IF NOT EXISTS {DBHelper.__TABLE_NOTES} (`id` INT NOT NULL AUTO_INCREMENT,   `author_id` INT NOT NULL,    `book_id` INT NOT NULL,               `title` VARCHAR(64) NOT NULL,    `text` TEXT NOT NULL,    PRIMARY KEY (`id`), FOREIGN KEY (`author_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,   FOREIGN KEY (`book_id`) REFERENCES `books` (`id`) ON DELETE CASCADE)')
 
 
     def auth(self, data: dict) -> User | None:
@@ -136,6 +136,32 @@ class DBHelper:
             return False
         return True
 
+
+    def get_notes(self, author_id: int, book_id: int) -> list | None:
+        try:
+            with self.__database.cursor() as cursor:
+                cursor.execute(f'SELECT * FROM {DBHelper.__TABLE_NOTES} WHERE `author_id` = %s AND `book_id` = %s', (author_id, book_id))
+                return list(cursor.fetchall())
+        except:
+            return None
+
+
+    def create_note(self, author_id: int, book_id: int, title: str, text: str) -> bool:
+        try:
+            with self.__database.cursor() as cursor:
+                cursor.execute(f'INSERT INTO {DBHelper.__TABLE_NOTES} (`author_id`, `book_id`, `title`, `text`) VALUES (%s, %s, %s, %s)', (author_id, book_id, title, text))
+        except:
+            return False
+        return True
+
+
+    def delete_note(self, author_id: int, book_id: int, note_id: int) -> bool:
+        try:
+            with self.__database.cursor() as cursor:
+                cursor.execute(f'DELETE FROM {DBHelper.__TABLE_NOTES} WHERE `author_id` = %s AND `book_id` = %s AND `note_id` = %s', (author_id, book_id, note_id))
+        except:
+            return False
+        return True
 
     def __del__(self):
         self.__database.close()

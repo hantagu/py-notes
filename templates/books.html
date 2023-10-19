@@ -21,7 +21,11 @@
 <div class="card mt-4">
     <div class="card-header">{{i[1]}}</div>
     <div class="card-body">Заметок: {{i[2]}}</div>
-    <div class="card-footer d-flex justify-content-end">
+    <div class="card-footer d-flex">
+        <form method="get" action="/book" class="me-auto">
+            <input type="hidden" name="id" value="{{i[0]}}">
+            <input type="submit" class="btn btn-outline-success" value="Просмотр">
+        </form>
         <form method="post" action="/delete-book">
             <input type="hidden" name="id" value="{{i[0]}}">
             <input type="submit" class="btn btn-outline-danger" value="Удалить">
