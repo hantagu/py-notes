@@ -161,7 +161,7 @@ def delete_book():
 def notes():
 
     def ok(user: User) -> Response:
-        return template(PAGE_NOTES, user, notes=database.get_notes(user.id, int(request.args['id'])))
+        return template(PAGE_NOTES, user, book_id=request.args['id'], notes=database.get_notes(user.id, int(request.args['id'])))
 
     def err() -> Response:
         return redirect(url_for(error.__name__, msg='Ошибка аутентификации')) # type: ignore
@@ -174,11 +174,11 @@ def notes():
 def create_note():
 
     def ok(user: User) -> Response:
-        if not all((book_id := request.args['book_id'], title := request.args['title'], text := request.args['text'])):
+        if not all((book_id := request.form['book_id'], title := request.form['title'], text := request.form['text'])):
             return redirect(url_for(error.__name__, msg='Недостаточно аргументов')) # type: ignore
         if not database.create_note(user.id, int(book_id), title, text):
             return redirect(url_for(error.__name__, msg='Ошибка обращения к БД')) # type: ignore
-        return redirect(url_for(notes.__name__, ))
+        return redirect(url_for(notes.__name__, id=book_id)) # type: ignore
 
     def err() -> Response:
         return redirect(url_for(error.__name__, msg='Ошибка аутентификации')) # type: ignore
@@ -191,7 +191,7 @@ def create_note():
 def delete_note():
 
     def ok(user: User) -> Response:
-        pass
+        return redirect(url_for(main.__name__)) # type: ignore
 
     def err() -> Response:
         return redirect(url_for(error.__name__, msg='Ошибка аутентификации')) # type: ignore

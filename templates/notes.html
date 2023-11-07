@@ -6,6 +6,7 @@
     <div class="card-header">Создать новую заметку</div>
     <form method="post" action="/create-note">
         <div class="card-body">
+            <input type="hidden" name="book_id" value="{{book_id}}">
             <input type="text" class="form-control mb-3" name="title" required placeholder="Заголовок">
             <textarea type="text" class="form-control" name="text" required placeholder="Текст"></textarea>
         </div>
