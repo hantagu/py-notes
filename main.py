@@ -114,7 +114,7 @@ def logout() -> Response:
 def books() -> tuple[Callable[[User], Response], Callable[[], Response]]:
 
     def ok(user: User) -> Response:
-        return template(PAGE_BOOKS, user=user, books=database.get_books(user.id))
+        return template(PAGE_BOOKS, user, books=database.get_books(user.id))
 
     def err() -> Response:
         return redirect(url_for(error.__name__, msg='Ошибка аутентификации')) # type: ignore
@@ -144,9 +144,9 @@ def create_book() -> tuple[Callable[[User], Response], Callable[[], Response]]:
 def delete_book():
 
     def ok(user: User) -> Response:
-        if not (id := request.form.get('id')):
+        if not (book_id := request.form.get('book_id')):
             return redirect(url_for(error.__name__, msg='Недостаточно аргументов')) # type: ignore
-        if not database.delete_book(user.id, int(id)):
+        if not database.delete_book(user.id, int(book_id)):
             return redirect(url_for(error.__name__, msg='Ошибка обращения к БД')) # type: ignore
         return redirect(url_for(books.__name__)) # type: ignore
 
@@ -161,7 +161,7 @@ def delete_book():
 def notes():
 
     def ok(user: User) -> Response:
-        return template(PAGE_NOTES, user, book_id=request.args['id'], notes=database.get_notes(user.id, int(request.args['id'])))
+        return template(PAGE_NOTES, user, book_id=request.args['book_id'], notes=database.get_notes(user.id, int(request.args['book_id'])))
 
     def err() -> Response:
         return redirect(url_for(error.__name__, msg='Ошибка аутентификации')) # type: ignore
@@ -178,7 +178,7 @@ def create_note():
             return redirect(url_for(error.__name__, msg='Недостаточно аргументов')) # type: ignore
         if not database.create_note(user.id, int(book_id), title, text):
             return redirect(url_for(error.__name__, msg='Ошибка обращения к БД')) # type: ignore
-        return redirect(url_for(notes.__name__, id=book_id)) # type: ignore
+        return redirect(url_for(notes.__name__, book_id=book_id)) # type: ignore
 
     def err() -> Response:
         return redirect(url_for(error.__name__, msg='Ошибка аутентификации')) # type: ignore

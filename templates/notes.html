@@ -26,7 +26,8 @@
     <div class="card-body">{{i[4]}}</div>
     <div class="card-footer d-flex">
         <form method="post" action="/delete-note">
-            <input type="hidden" name="id" value="{{i[0]}}">
+            <input type="hidden" name="book_id" value="{{book_id}}">
+            <input type="hidden" name="note_id" value="{{i[0]}}">
             <input type="submit" class="btn btn-outline-danger" value="Удалить">
         </form>
     </div>

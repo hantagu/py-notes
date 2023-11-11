@@ -29,9 +29,9 @@ class DBHelper:
                 cursor.executemany('DROP TABLE IF EXISTS %s', (DBHelper.__TABLE_USERS, DBHelper.__TABLE_BOOKS, DBHelper.__TABLE_NOTES))
 
         with self.__database.cursor() as cursor:
-            cursor.execute(f'CREATE TABLE IF NOT EXISTS {DBHelper.__TABLE_USERS} (`id` INT NOT NULL AUTO_INCREMENT,   `username` VARCHAR(32),      `first_name` VARCHAR(64) NOT NULL,    `last_name` VARCHAR(64),                                 PRIMARY KEY (`id`))')
-            cursor.execute(f'CREATE TABLE IF NOT EXISTS {DBHelper.__TABLE_BOOKS} (`id` INT NOT NULL AUTO_INCREMENT,   `owner_id` INT NOT NULL,     `title` VARCHAR(64) NOT NULL,                                                                  PRIMARY KEY (`id`), FOREIGN KEY (`owner_id`) REFERENCES `users` (`id`) ON DELETE CASCADE)')
-            cursor.execute(f'CREATE TABLE IF NOT EXISTS {DBHelper.__TABLE_NOTES} (`id` INT NOT NULL AUTO_INCREMENT,   `author_id` INT NOT NULL,    `book_id` INT NOT NULL,               `title` VARCHAR(64) NOT NULL,    `text` TEXT NOT NULL,    PRIMARY KEY (`id`), FOREIGN KEY (`author_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,   FOREIGN KEY (`book_id`) REFERENCES `books` (`id`) ON DELETE CASCADE)')
+            cursor.execute(f'CREATE TABLE IF NOT EXISTS {DBHelper.__TABLE_USERS} (`id` INT NOT NULL,                  `username` VARCHAR(32),      `first_name` VARCHAR(64) NOT NULL,    `last_name` VARCHAR(64),                                  PRIMARY KEY (`id`))')
+            cursor.execute(f'CREATE TABLE IF NOT EXISTS {DBHelper.__TABLE_BOOKS} (`id` INT NOT NULL AUTO_INCREMENT,   `owner_id` INT NOT NULL,     `title` VARCHAR(64) NOT NULL,                                                                   PRIMARY KEY (`id`),    FOREIGN KEY (`owner_id`) REFERENCES `users` (`id`) ON DELETE CASCADE)')
+            cursor.execute(f'CREATE TABLE IF NOT EXISTS {DBHelper.__TABLE_NOTES} (`id` INT NOT NULL AUTO_INCREMENT,   `author_id` INT NOT NULL,    `book_id` INT NOT NULL,               `title` VARCHAR(64) NOT NULL,    `text` TEXT NOT NULL,    PRIMARY KEY (`id`),    FOREIGN KEY (`author_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,    FOREIGN KEY (`book_id`) REFERENCES `books` (`id`) ON DELETE CASCADE)')
 
 
     def auth(self, data: dict) -> User | None:

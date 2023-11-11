@@ -15,7 +15,10 @@
             <div class="container">
                 <ul class="nav nav-pills me-auto">
                     <li class="nav-item"><a href="/" class="nav-link{% if page == 'main' %} active{% endif %}">Главная</a></li>
-                    {% if user %}<li class="nav-item"><a href="/books" class="nav-link{% if page == 'books' %} active{% endif %}">Книжки</a></li>{% endif %}
+                    {% if user %}
+                    <li class="nav-item"><a href="/books" class="nav-link{% if page == 'books' %} active{% endif %}">Заметки</a></li>
+                    <li class="nav-item"><a href="/lists" class="nav-link{% if page == 'lists' %} active{% endif %}">Списки дел</a></li>
+                    {% endif %}
                 </ul>
                 <ul class="nav nav-pills">
                     {% if not user %}
