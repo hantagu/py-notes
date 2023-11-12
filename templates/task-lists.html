@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="card">
+    <div class="card-header">Создать новый список задач</div>
+    <form method="post" action="/create-task-list">
+        <div class="card-body">
+            <input type="text" class="form-control" name="title" required placeholder="Название">
+            <div class="input-group mt-3">
+                <input type="button" class="btn btn-outline-success" onclick="addTask(this)" value="+">
+                <input type="text" class="form-control" id="add_task_input" placeholder="Новая задача...">
+            </div>
+            <hr class="mb-0">
+            <div id="tasks">
+            </div>
+        </div>
+        <div class="card-footer d-flex justify-content-end justify-content-md-start">
+            <input type="submit" class="btn btn-success" value="Создать">
+        </div>
+    </form>
+</div>
+
+<script>
+    function addTask(e)
+    {
+        let task_input = document.getElementById('add_task_input');
+
+        if (task_input.value.length <= 0) {
+            return;
+        }
+
+        document.getElementById('tasks').innerHTML += `
+            <div class="input-group mt-3">
+                <input type="text" class="form-control" name="task" value="${task_input.value}" readonly>
+                <input type="button" class="btn btn-outline-danger" onclick="deleteTask(this)" value="-">
+            </div>
+        `;
+
+        task_input.value = '';
+    }
+
+    function deleteTask(e)
+    {
+        e.parentElement.remove();
+    }
+</script>
+{% endblock %}

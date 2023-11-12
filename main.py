@@ -22,6 +22,10 @@ PAGE_NOTES = 'notes'
 METHOD_CREATE_NOTE = 'create-note'
 METHOD_DELETE_NOTE = 'delete-note'
 
+PAGE_TASK_LISTS = 'task-lists'
+METHOD_CREATE_TASK_LIST = 'create-task-list'
+METHOD_DELETE_TASK_LIST = 'delete-task-list'
+
 METHOD_LOGIN = 'login'
 METHOD_LOGOUT = 'logout'
 
@@ -198,5 +202,17 @@ def delete_note():
 
     return ok, err
 
+
+@app.get(f'/{PAGE_TASK_LISTS}')
+@auth_splitted
+def task_lists():
+
+    def ok(user: User) -> Response:
+        return template(PAGE_TASK_LISTS, user)
+
+    def err() -> Response:
+        return redirect(url_for(error.__name__, msg='Ошибка аутентификации')) # type: ignore
+
+    return ok, err
 
 app.run(os.environ['LISTEN_ADDR'], 443, ssl_context=ctx)
