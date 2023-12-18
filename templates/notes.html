@@ -4,7 +4,7 @@
 
 <div class="card">
     <div class="card-header">Создать новую заметку</div>
-    <form method="post" action="/create-note">
+    <form method="post" action="/method/create-note">
         <div class="card-body">
             <input type="hidden" name="book_id" value="{{book_id}}">
             <input type="text" class="form-control mb-3" name="title" required placeholder="Заголовок">
@@ -20,14 +20,14 @@
 <div class="d-flex justify-content-center mt-4 text-secondary fst-italic">В этой записной книжке ещё нет ни одной заметки</div>
 {% else %}
 {% endif %}
-{% for i in notes %}
+{% for note in notes %}
 <div class="card mt-4">
-    <div class="card-header">{{i[3]}}</div>
-    <div class="card-body">{{i[4]}}</div>
+    <div class="card-header">note.title</div>
+    <div class="card-body">note.text</div>
     <div class="card-footer d-flex">
-        <form method="post" action="/delete-note">
+        <form method="post" action="/method/delete-note">
             <input type="hidden" name="book_id" value="{{book_id}}">
-            <input type="hidden" name="note_id" value="{{i[0]}}">
+            <input type="hidden" name="note_id" value="{{note.id}}">
             <input type="submit" class="btn btn-outline-danger" value="Удалить">
         </form>
     </div>

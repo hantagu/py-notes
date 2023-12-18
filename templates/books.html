@@ -4,7 +4,7 @@
 
 <div class="card">
     <div class="card-header">Создать новую записную книжку</div>
-    <form method="post" action="/create-book">
+    <form method="post" action="/method/create-book">
         <div class="card-body">
             <input type="text" class="form-control" name="title" required placeholder="Название">
         </div>
@@ -17,17 +17,17 @@
 {% if not books %}
 <div class="d-flex justify-content-center mt-4 text-secondary fst-italic">У вас пока ещё нет ни одной записной книжки</div>
 {% else %}
-{% for i in books %}
+{% for book, notes in books %}
 <div class="card mt-4">
-    <div class="card-header">{{i[1]}}</div>
-    <div class="card-body">Заметок: {{i[2]}}</div>
+    <div class="card-header">{{book.title}}</div>
+    <div class="card-body">Заметок: {{notes}}</div>
     <div class="card-footer d-flex">
         <form method="get" action="/notes" class="me-auto">
-            <input type="hidden" name="book_id" value="{{i[0]}}">
+            <input type="hidden" name="book_id" value="{{book.id}}">
             <input type="submit" class="btn btn-outline-success" value="Просмотр">
         </form>
-        <form method="post" action="/delete-book">
-            <input type="hidden" name="book_id" value="{{i[0]}}">
+        <form method="post" action="/method/delete-book">
+            <input type="hidden" name="book_id" value="{{book.id}}">
             <input type="submit" class="btn btn-outline-danger" value="Удалить">
         </form>
     </div>

@@ -4,8 +4,9 @@ import hashlib
 from collections.abc import Callable
 
 from ssl import SSLContext, PROTOCOL_TLS_SERVER
+import dotenv
 
-from flask import Flask, Response, make_response, redirect, render_template, url_for, request, session
+from flask import Flask, Response, make_response, redirect, render_template, url_for, request, session, jsonify
 
 from database import DBHelper, User
 
@@ -15,20 +16,21 @@ PAGE_ERROR = 'error'
 PAGE_MAIN = 'main'
 
 PAGE_BOOKS = 'books'
-METHOD_CREATE_BOOK = 'create-book'
-METHOD_DELETE_BOOK = 'delete-book'
+METHOD_CREATE_BOOK = 'method/create-book'
+METHOD_DELETE_BOOK = 'method/delete-book'
 
 PAGE_NOTES = 'notes'
-METHOD_CREATE_NOTE = 'create-note'
-METHOD_DELETE_NOTE = 'delete-note'
+METHOD_CREATE_NOTE = 'method/create-note'
+METHOD_DELETE_NOTE = 'method/delete-note'
 
 PAGE_TASK_LISTS = 'task-lists'
-METHOD_CREATE_TASK_LIST = 'create-task-list'
-METHOD_DELETE_TASK_LIST = 'delete-task-list'
+METHOD_CREATE_TASK_LIST = 'method/create-task-list'
+METHOD_DELETE_TASK_LIST = 'method/delete-task-list'
 
-METHOD_LOGIN = 'login'
-METHOD_LOGOUT = 'logout'
+METHOD_LOGIN = 'method/login'
+METHOD_LOGOUT = 'method/logout'
 
+dotenv.load_dotenv()
 
 app = Flask(__name__)
 app.secret_key = os.environ['APP_KEY']
@@ -37,10 +39,10 @@ app.jinja_env.keep_trailing_newline = True
 
 
 ctx = SSLContext(PROTOCOL_TLS_SERVER)
-ctx.load_cert_chain(certfile=f'./tls/{os.environ["LISTEN_ADDR"]}.crt', keyfile=f'./tls/{os.environ["LISTEN_ADDR"]}.key')
+ctx.load_cert_chain(certfile=os.environ['TLS_CERT'], keyfile=os.environ['TLS_KEY'])
 
 
-database = DBHelper(os.environ['MYSQL_HOST'], os.environ['MYSQL_USER'], os.environ['MYSQL_PASSWD'], os.environ['MYSQL_DATABASE'])
+database = DBHelper(os.environ['POSTGRES_HOST'], int(os.environ['POSTGRES_PORT']), os.environ['POSTGRES_USER'], os.environ['POSTGRES_PASSWD'], os.environ['POSTGRES_DBNAME'])
 
 
 def template(view_name: str, user: User | None, **kwargs) -> Response:
@@ -64,6 +66,13 @@ def auth_joined(f: Callable[[], Callable[[User | None], Response]]) -> Callable[
     return wrapper
 
 
+
+@app.get('/test')
+def test():
+    return jsonify({ "a": [1,2,3] })
+
+
+
 @app.get('/')
 @auth_splitted
 def main() -> tuple[Callable[[User], Response], Callable[[], Response]]:
@@ -72,7 +81,7 @@ def main() -> tuple[Callable[[User], Response], Callable[[], Response]]:
         return template(PAGE_MAIN, user)
 
     def err() -> Response:
-        return template(PAGE_MAIN, None, total_notes_count=database.total_notes_count())
+        return template(PAGE_MAIN, None, total_notes_count=0)
 
     return ok, err
 
@@ -150,7 +159,7 @@ def delete_book():
     def ok(user: User) -> Response:
         if not (book_id := request.form.get('book_id')):
             return redirect(url_for(error.__name__, msg='Недостаточно аргументов')) # type: ignore
-        if not database.delete_book(user.id, int(book_id)):
+        if not database.delete_book(user.id, book_id):
             return redirect(url_for(error.__name__, msg='Ошибка обращения к БД')) # type: ignore
         return redirect(url_for(books.__name__)) # type: ignore
 
@@ -165,7 +174,7 @@ def delete_book():
 def notes():
 
     def ok(user: User) -> Response:
-        return template(PAGE_NOTES, user, book_id=request.args['book_id'], notes=database.get_notes(user.id, int(request.args['book_id'])))
+        return template(PAGE_NOTES, user, book_id=request.args['book_id'], notes=database.get_notes(user.id, request.args['book_id']))
 
     def err() -> Response:
         return redirect(url_for(error.__name__, msg='Ошибка аутентификации')) # type: ignore
@@ -180,7 +189,7 @@ def create_note():
     def ok(user: User) -> Response:
         if not all((book_id := request.form['book_id'], title := request.form['title'], text := request.form['text'])):
             return redirect(url_for(error.__name__, msg='Недостаточно аргументов')) # type: ignore
-        if not database.create_note(user.id, int(book_id), title, text):
+        if not database.create_note(user.id, book_id, title, text):
             return redirect(url_for(error.__name__, msg='Ошибка обращения к БД')) # type: ignore
         return redirect(url_for(notes.__name__, book_id=book_id)) # type: ignore
 
@@ -215,4 +224,4 @@ def task_lists():
 
     return ok, err
 
-app.run(os.environ['LISTEN_ADDR'], 443, ssl_context=ctx)
+app.run(os.environ['LISTEN_ADDR'], int(os.environ['LISTEN_PORT']), ssl_context=ctx)
