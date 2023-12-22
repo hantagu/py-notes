@@ -21,6 +21,12 @@
     </form>
 </div>
 
+{% if not books %}
+<div class="d-flex justify-content-center mt-4 text-secondary fst-italic">У вас пока ещё нет ни одного списка дел</div>
+{% else %}
+...
+{% endif %}
+
 <script>
     function addTask(e)
     {

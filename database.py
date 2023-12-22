@@ -1,8 +1,9 @@
-from datetime import datetime
-from sqlite3 import dbapi2
 import sys
 from uuid import UUID
+from datetime import datetime
+
 import psycopg
+
 
 class User:
 

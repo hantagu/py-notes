@@ -40,9 +40,6 @@ CREATE TABLE IF NOT EXISTS "notes"
     CONSTRAINT "pk_note_id"
         PRIMARY KEY ("id"),
 
-    CONSTRAINT "fk_note_owner_id"
-        FOREIGN KEY ("owner_id") REFERENCES "users"("id") ON DELETE CASCADE,
-
     CONSTRAINT "fk_note_book_id"
         FOREIGN KEY ("book_id") REFERENCES "books"("id") ON DELETE CASCADE
 );
@@ -51,12 +48,15 @@ CREATE TABLE IF NOT EXISTS "notes"
 CREATE TABLE IF NOT EXISTS "tasklists"
 (
     "id" UUID NOT NULL DEFAULT gen_random_uuid(),
-    "owner_id" UUID NOT NULL,
+    "owner_id" INT NOT NULL,
 
     "title" VARCHAR(64) NOT NULL,
 
     CONSTRAINT "pk_tasklist_id"
-        PRIMARY KEY ("id")
+        PRIMARY KEY ("id"),
+
+    CONSTRAINT "fk_tasklist_owner_id"
+        FOREIGN KEY ("owner_id") REFERENCES "users"("id") ON DELETE CASCADE
 );
 
 
