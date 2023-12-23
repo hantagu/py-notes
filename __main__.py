@@ -3,10 +3,10 @@ import hmac
 import hashlib
 from ssl import SSLContext, PROTOCOL_TLS_SERVER
 from collections.abc import Callable
+from uuid import UUID
 
 import dotenv
-from flask import Flask, Response, make_response, redirect, render_template, url_for, request, session
-from flask import json
+from flask import Flask, Response, jsonify, make_response, redirect, render_template, url_for, request, session
 
 from database import DBHelper, User
 
@@ -134,7 +134,9 @@ def logout() -> Response:
 def books() -> tuple[Callable[[User], Response], Callable[[], Response]]:
 
     def ok(user: User) -> Response:
-        return template(PAGE_BOOKS, user, books=database.get_books(user.id))
+        books = database.get_books(user.id)
+        print(user.id, books)
+        return template(PAGE_BOOKS, user, books=books)
 
     def err() -> Response:
         return redirect(url_for(error.__name__, msg='Ошибка аутентификации')) # type: ignore
@@ -166,7 +168,7 @@ def delete_book():
     def ok(user: User) -> Response:
         if not (book_id := request.form.get('book_id')):
             return redirect(url_for(error.__name__, msg='Недостаточно аргументов')) # type: ignore
-        if not database.delete_book(user.id, book_id):
+        if not database.delete_book(user.id, UUID(book_id)):
             return redirect(url_for(error.__name__, msg='Ошибка обращения к БД')) # type: ignore
         return redirect(url_for(books.__name__)) # type: ignore
 
@@ -181,7 +183,7 @@ def delete_book():
 def notes():
 
     def ok(user: User) -> Response:
-        return template(PAGE_NOTES, user, book_id=request.args['book_id'], notes=database.get_notes(user.id, request.args['book_id']))
+        return template(PAGE_NOTES, user, book_id=request.args['book_id'], notes=database.get_notes(user.id, UUID(request.args['book_id'])))
 
     def err() -> Response:
         return redirect(url_for(error.__name__, msg='Ошибка аутентификации')) # type: ignore
@@ -196,7 +198,7 @@ def create_note():
     def ok(user: User) -> Response:
         if not all((book_id := request.form['book_id'], title := request.form['title'], text := request.form['text'])):
             return redirect(url_for(error.__name__, msg='Недостаточно аргументов')) # type: ignore
-        if not database.create_note(user.id, book_id, title, text):
+        if not database.create_note(user.id, UUID(book_id), title, text):
             return redirect(url_for(error.__name__, msg='Ошибка обращения к БД')) # type: ignore
         return redirect(url_for(notes.__name__, book_id=book_id)) # type: ignore
 
@@ -237,10 +239,12 @@ def task_lists():
 def api():
 
     def ok(user: User) -> Response:
-        pass
+        return jsonify({'ok': True})
 
     def err() -> Response:
-        pass
+        return jsonify({'ok': False})
+
+    return ok, err
 
 
 app.run(os.environ['LISTEN_ADDR'], int(os.environ['LISTEN_PORT']), ssl_context=ctx)

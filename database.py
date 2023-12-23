@@ -131,7 +131,7 @@ class DBHelper:
         for book in books_result:
             try:
                 with self.__database.cursor() as cursor:
-                    cursor.execute(f'SELECT COUNT("id") FROM "{DBHelper.__TABLE_NOTES}" WHERE "owner_id" = %s AND "book_id" = %s', (user_id, book[0]))
+                    cursor.execute(f'SELECT COUNT("id") FROM "{DBHelper.__TABLE_NOTES}" WHERE "book_id" = %s', (book[0], ))
                     count = result[0] if (result := cursor.fetchone()) else 0
             except:
                 return None
@@ -161,7 +161,7 @@ class DBHelper:
     def get_notes(self, owner_id: int, book_id: UUID) -> list[Note] | None:
         try:
             with self.__database.cursor() as cursor:
-                cursor.execute(f'SELECT * FROM "{DBHelper.__TABLE_NOTES}" WHERE "owner_id" = %s AND "book_id" = %s', (owner_id, book_id))
+                cursor.execute(f'SELECT * FROM "{DBHelper.__TABLE_NOTES}" WHERE "book_id" = %s', (book_id, ))
                 return [Note(*i) for i in cursor.fetchall()]
         except:
             return None
