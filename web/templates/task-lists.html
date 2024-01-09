@@ -21,34 +21,39 @@
     </form>
 </div>
 
-{% if not books %}
+{% if not tasklists %}
 <div class="d-flex justify-content-center mt-4 text-secondary fst-italic">У вас пока ещё нет ни одного списка дел</div>
 {% else %}
-...
+{% for tasklist in tasklists %}
+{{tasklist}}<br>
+{% endfor %}
 {% endif %}
 
 <script>
-    function addTask(e)
+
+    const addTask = (e) =>
     {
         let task_input = document.getElementById('add_task_input');
+        let value = task_input.value.trim();
 
-        if (task_input.value.length <= 0) {
+        if (value <= 0) {
+            task_input.value = '';
             return;
         }
 
         document.getElementById('tasks').innerHTML += `
             <div class="input-group mt-3">
-                <input type="text" class="form-control" name="task" value="${task_input.value}" readonly>
+                <input type="text" class="form-control" name="task" value="${value}" readonly>
                 <input type="button" class="btn btn-outline-danger" onclick="deleteTask(this)" value="-">
             </div>
         `;
 
         task_input.value = '';
-    }
+    };
 
-    function deleteTask(e)
-    {
+    const deleteTask = (e) => {
         e.parentElement.remove();
-    }
+    };
+
 </script>
 {% endblock %}

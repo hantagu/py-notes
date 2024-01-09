@@ -1,5 +1,5 @@
 import sys
-from uuid import UUID
+from uuid import UUID, uuid4
 from datetime import datetime
 
 import psycopg
@@ -28,11 +28,28 @@ class Book:
 
 class Note:
 
-    def __init__(self, id: UUID, owner_id: UUID, title: str, text: str) -> None:
+    def __init__(self, id: UUID, book_id: UUID, title: str, text: str) -> None:
+        self.id = id
+        self.book_id = book_id
+        self.title = title
+        self.text = text
+
+
+class TaskList:
+
+    def __init__(self, id: UUID, owner_id: UUID, title: str) -> None:
         self.id = id
         self.owner_id = owner_id
         self.title = title
-        self.text = text
+
+
+class Task:
+
+    def __init__(self, id: UUID, tasklist_id: UUID, title: str, is_done: bool) -> None:
+        self.id = id
+        self.tasklist_id = tasklist_id
+        self.title = title
+        self.is_done = is_done
 
 
 class DBHelper:
@@ -40,6 +57,8 @@ class DBHelper:
     __TABLE_USERS = 'users'
     __TABLE_BOOKS = 'books'
     __TABLE_NOTES = 'notes'
+    __TABLE_TASKLISTS = 'tasklists'
+    __TABLE_TASKS = 'tasks'
 
 
     def __init__(self, host: str, port: int, user: str, password: str, dbname: str) -> None:
@@ -170,7 +189,7 @@ class DBHelper:
     def create_note(self, owner_id: int, book_id: UUID, title: str, text: str) -> bool:
         try:
             with self.__database.cursor() as cursor:
-                cursor.execute(f'INSERT INTO "{DBHelper.__TABLE_NOTES}" ("owner_id", "book_id", "title", "text") VALUES (%s, %s, %s, %s)', (owner_id, book_id, title, text))
+                cursor.execute(f'INSERT INTO "{DBHelper.__TABLE_NOTES}" ("book_id", "title", "text") VALUES (%s, %s, %s)', (book_id, title, text))
         except:
             return False
         return True
@@ -179,8 +198,36 @@ class DBHelper:
     def delete_note(self, owner_id: int, book_id: UUID, note_id: UUID) -> bool:
         try:
             with self.__database.cursor() as cursor:
-                cursor.execute(f'DELETE FROM "{DBHelper.__TABLE_NOTES}" WHERE "owner_id" = %s AND "book_id" = %s AND "note_id" = %s', (owner_id, book_id, note_id))
+                cursor.execute(f'DELETE FROM "{DBHelper.__TABLE_NOTES}" WHERE "book_id" = %s AND "note_id" = %s', (book_id, note_id))
         except:
+            return False
+        return True
+
+
+    def get_tasklists(self, owner_id: int) -> list[TaskList] | None:
+        try:
+            with self.__database.cursor() as cursor:
+                cursor.execute(f'SELECT * FROM "{DBHelper.__TABLE_TASKLISTS}" WHERE "owner_id" = %s', (owner_id, ))
+                tasklists_result = cursor.fetchall()
+        except:
+            return None
+
+        tasklists: list[TaskList] = []
+        for tasklist in tasklists_result:
+            tasklists.append(TaskList(*tasklist))
+
+        return tasklists
+
+
+    def create_tasklist(self, owner_id: int, title: str, tasks: list[str]) -> bool:
+        try:
+            with self.__database.cursor() as cursor:
+                uuid = uuid4()
+                cursor.execute(f'INSERT INTO "{DBHelper.__TABLE_TASKLISTS}" ("id", "owner_id", "title") VALUES (%s, %s, %s)', (uuid, owner_id, title))
+                for task in tasks:
+                    cursor.execute(f'INSERT INTO {DBHelper.__TABLE_TASKS} ("tasklist_id", "text", "is_done") VALUES (%s, %s, %s)', (uuid, task, False))
+        except Exception as e:
+            print(e)
             return False
         return True
 

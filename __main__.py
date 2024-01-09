@@ -1,11 +1,17 @@
 import os
-import hmac
-import hashlib
-from ssl import SSLContext, PROTOCOL_TLS_SERVER
-from collections.abc import Callable
-from uuid import UUID
+from time import time
 
-import dotenv
+from uuid import UUID
+from hashlib import sha256
+import hmac
+from ssl import SSLContext, PROTOCOL_TLS_SERVER
+
+from collections import OrderedDict
+from collections.abc import Callable
+from typing import Any
+
+import jwt
+from dotenv import load_dotenv
 from flask import Flask, Response, jsonify, make_response, redirect, render_template, url_for, request, session
 
 from database import DBHelper, User
@@ -31,25 +37,25 @@ METHOD_LOGIN = 'method/login'
 METHOD_LOGOUT = 'method/logout'
 
 
-API_GET_BOOKS = 'get_books'
-API_CREATE_BOOK = 'create_book'
-API_DELETE_BOOK = 'delete_book'
+# API_GET_BOOKS = 'get_books'
+# API_CREATE_BOOK = 'create_book'
+# API_DELETE_BOOK = 'delete_book'
 
-API_GET_NOTES = 'get_notes'
-API_CREATE_NOTE = 'create_note'
-API_DELETE_NOTE = 'delete_note'
+# API_GET_NOTES = 'get_notes'
+# API_CREATE_NOTE = 'create_note'
+# API_DELETE_NOTE = 'delete_note'
 
-API_GET_TASK_LISTS = 'get_task_lists'
-API_CREATE_TASK_LIST = 'create_task_list'
-API_DELETE_TASK_LIST = 'delete_task_list'
+# API_GET_TASK_LISTS = 'get_task_lists'
+# API_CREATE_TASK_LIST = 'create_task_list'
+# API_DELETE_TASK_LIST = 'delete_task_list'
 
 
-dotenv.load_dotenv()
+load_dotenv()
 
-app = Flask(__name__)
+app = Flask(__name__, template_folder='web/templates', static_folder='web/static')
 app.secret_key = os.environ['APP_KEY']
 bot_token = os.environ['BOT_TOKEN']
-app.jinja_env.keep_trailing_newline = True
+app.jinja_env.auto_reload = True
 
 
 ctx = SSLContext(PROTOCOL_TLS_SERVER)
@@ -103,30 +109,50 @@ def error() -> Callable[[User | None], Response]:
     return page
 
 
-@app.get(f'/{METHOD_LOGIN}')
+@app.post(f'/{METHOD_LOGIN}')
 def login() -> Response:
 
-    if not (tg_hash := request.args.get('hash')):
-        return redirect(url_for(error.__name__, msg='Параметр `hash` отсутствует в ответе от Telegram')) # type: ignore
+    try:
+        data: dict[Any, Any] = request.json # type: ignore
+    except:
+        return jsonify(OrderedDict([('ok', False), ('description', 'body is not a json')]))
 
-    sorted_args = [(k, v) for k, v in sorted(request.args.items(), key=lambda x: x[0]) if k != 'hash']
+    if not all([hash := str(data.get('hash', '')), id := int(data.get('id', 0)), first_name := str(data.get('first_name', '')), auth_date := int(data.get('auth_date', 0))]):
+        return jsonify(OrderedDict([('ok', False), ('description', 'not enough arguments')]))
 
+    sorted_args = [(k, v) for k, v in sorted(data.items(), key=lambda x: x[0]) if k != 'hash']
     data_check_string = '\n'.join([f'{k}={v}' for k, v in sorted_args])
-    secret_key = hashlib.sha256(bot_token.encode()).digest()
+    secret_key = sha256(bot_token.encode()).digest()
 
-    if hmac.new(secret_key, data_check_string.encode(), hashlib.sha256).hexdigest() != tg_hash:
-        return redirect(url_for(error.__name__, msg='Нарушена целостность данных, полученных от Telegram')) # type: ignore
+    if hmac.new(secret_key, data_check_string.encode(), sha256).hexdigest() != hash:
+        return jsonify(OrderedDict([('ok', False), ('description', 'data is not from Telegram')]))
 
-    for k, v in sorted_args:
-        session[k] = v
+    timestamp = int(time())
+    if timestamp - auth_date > 300:
+        return jsonify(OrderedDict([('ok', False), ('description', 'data is outdated')]))
 
-    return redirect(url_for(main.__name__)) # type: ignore
+    auth_token = jwt.encode({'iss': 'https://91.215.155.252:443/', 'sub': id, 'exp': timestamp+86400, 'iat': timestamp}, app.secret_key)
+    return jsonify(OrderedDict([('ok', True), ('result', OrderedDict([('auth_token', auth_token)]))]))
 
 
-@app.get(f'/{METHOD_LOGOUT}')
-def logout() -> Response:
-    session.clear()
-    return redirect(url_for(main.__name__)) # type: ignore
+# @app.get(f'/{METHOD_LOGIN}')
+# def login() -> Response:
+
+#     if not (tg_hash := request.args.get('hash')):
+#         return redirect(url_for(error.__name__, msg='Параметр `hash` отсутствует в ответе от Telegram')) # type: ignore
+
+#     sorted_args = [(k, v) for k, v in sorted(request.args.items(), key=lambda x: x[0]) if k != 'hash']
+
+#     data_check_string = '\n'.join([f'{k}={v}' for k, v in sorted_args])
+#     secret_key = hashlib.sha256(bot_token.encode()).digest()
+
+#     if hmac.new(secret_key, data_check_string.encode(), hashlib.sha256).hexdigest() != tg_hash:
+#         return redirect(url_for(error.__name__, msg='Нарушена целостность данных, полученных от Telegram')) # type: ignore
+
+#     for k, v in sorted_args:
+#         session[k] = v
+
+#     return redirect(url_for(main.__name__)) # type: ignore
 
 
 @app.get(f'/{PAGE_BOOKS}')
@@ -135,7 +161,6 @@ def books() -> tuple[Callable[[User], Response], Callable[[], Response]]:
 
     def ok(user: User) -> Response:
         books = database.get_books(user.id)
-        print(user.id, books)
         return template(PAGE_BOOKS, user, books=books)
 
     def err() -> Response:
@@ -226,7 +251,7 @@ def delete_note():
 def task_lists():
 
     def ok(user: User) -> Response:
-        return template(PAGE_TASK_LISTS, user)
+        return template(PAGE_TASK_LISTS, user, tasklists=database.get_tasklists(user.id))
 
     def err() -> Response:
         return redirect(url_for(error.__name__, msg='Ошибка аутентификации')) # type: ignore
@@ -234,15 +259,19 @@ def task_lists():
     return ok, err
 
 
-@app.post('/api')
+@app.post(f'/{METHOD_CREATE_TASK_LIST}')
 @auth_splitted
-def api():
+def create_task_list():
 
     def ok(user: User) -> Response:
-        return jsonify({'ok': True})
+        if not all((title := request.form.get('title', None), tasks := request.form.getlist('task'))):
+            return redirect(url_for(error.__name__, msg='Недостаточно аргументов')) # type: ignore
+        if not database.create_tasklist(user.id, title, tasks): # type: ignore
+            return redirect(url_for(error.__name__, msg='Ошибка обращения к БД')) # type: ignore
+        return redirect(url_for(task_lists.__name__)) # type: ignore
 
     def err() -> Response:
-        return jsonify({'ok': False})
+        return redirect(url_for(error.__name__, msg='Ошибка аутентификации')) # type: ignore
 
     return ok, err
 
