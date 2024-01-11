@@ -2,16 +2,49 @@
 
 {% block content %}
 
-{% if user %}
-<div class="card">
-    <div class="card-header">Привет, {{user.name}}</div>
-    <div class="card-body">Ник: {{user.username}}, ID: {{user.id}}</div>
+<div class="card" id="card-logged" style="display: none;">
+    <div class="card-header" id="card-logged-header">Привет, %first_name</div>
+    <div class="card-body" id="card-logged-body">Ник: %username, ID: %id</div>
 </div>
-{% else %}
-<div class="card">
+
+<div class="card" id="card-unlogged" style="display: none;">
     <div class="card-header">Добро пожаловать</div>
-    <div class="card-body">Войдите в свою учётную запись с помощью Telegram и вы сможете создавать заметки и списки дел. Сервис насчитывает уже целых {{total_notes_count}} заметок</div>
+    <div class="card-body">Войдите в свою учётную запись с помощью Telegram и вы сможете создавать заметки и списки дел. Сервис насчитывает уже целых %notes заметок</div>
 </div>
-{% endif %}
+
+<script>
+    document.addEventListener('DOMContentLoaded', async () =>
+    {
+        let card_logged = document.getElementById('card-logged');
+        let card_logged_header = document.getElementById('card-logged-header');
+        let card_logged_body = document.getElementById('card-logged-body');
+
+        let card_unlogged = document.getElementById('card-unlogged');
+        let card_unlogged_header = document.getElementById('card-unlogged-header');
+        let card_unlogged_body = document.getElementById('card-unlogged-body');
+
+        let response = await fetch('/method/validate-token', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({'auth_token': sessionStorage.getItem('auth_token')})
+        });
+
+        let json_response = await response.json();
+
+        card_logged_header.innerText = card_logged_header.innerText.replace('%first_name', '???');
+        card_logged_body.innerText = card_logged_body.innerText.replace('%username', '???').replace('%id', json_response.result.sub);
+
+        if (sessionStorage.getItem('auth_token'))
+        {
+            card_logged.style.display = '';
+        }
+        else
+        {
+            card_unlogged.style.display = '';
+        }
+
+
+    });
+</script>
 
 {% endblock %}

@@ -1,4 +1,5 @@
 import os
+from re import A
 from time import time
 
 from uuid import UUID
@@ -34,20 +35,7 @@ METHOD_CREATE_TASK_LIST = 'method/create-task-list'
 METHOD_DELETE_TASK_LIST = 'method/delete-task-list'
 
 METHOD_LOGIN = 'method/login'
-METHOD_LOGOUT = 'method/logout'
-
-
-# API_GET_BOOKS = 'get_books'
-# API_CREATE_BOOK = 'create_book'
-# API_DELETE_BOOK = 'delete_book'
-
-# API_GET_NOTES = 'get_notes'
-# API_CREATE_NOTE = 'create_note'
-# API_DELETE_NOTE = 'delete_note'
-
-# API_GET_TASK_LISTS = 'get_task_lists'
-# API_CREATE_TASK_LIST = 'create_task_list'
-# API_DELETE_TASK_LIST = 'delete_task_list'
+METHOD_VALIDATE_TOKEN = 'method/validate-token'
 
 
 load_dotenv()
@@ -134,6 +122,24 @@ def login() -> Response:
     auth_token = jwt.encode({'iss': 'https://91.215.155.252:443/', 'sub': id, 'exp': timestamp+86400, 'iat': timestamp}, app.secret_key)
     return jsonify(OrderedDict([('ok', True), ('result', OrderedDict([('auth_token', auth_token)]))]))
 
+
+@app.post(f'/{METHOD_VALIDATE_TOKEN}')
+def validate_token() -> Response:
+
+    try:
+        data: dict[Any, Any] = request.json # type: ignore
+    except:
+        return jsonify(OrderedDict([('ok', False), ('description', 'body is not a json')]))
+
+    if not (encoded_token := str(data.get('auth_token', ''))):
+        return jsonify(OrderedDict([('ok', False), ('description', 'not enough arguments')]))
+
+    decoded_token: dict[Any, Any] = jwt.decode(encoded_token, app.secret_key, algorithms=[jwt.get_unverified_header(encoded_token)['alg']])
+
+    if int(time()) > decoded_token['exp']:
+        return jsonify(OrderedDict([('ok', False), ('description', 'token expired')]))
+
+    return jsonify(OrderedDict([('ok', True), ('result', decoded_token)]))
 
 # @app.get(f'/{METHOD_LOGIN}')
 # def login() -> Response:

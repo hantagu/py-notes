@@ -17,5 +17,5 @@ const onTelegramAuth = async (user) =>
     }
 
     sessionStorage.setItem('auth_token', json_response.result.auth_token);
-    document.dispatchEvent(new Event('DOMContentLoaded'));
+    document.dispatchEvent(new Event('navbar'));
 }

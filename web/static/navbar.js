@@ -1,4 +1,8 @@
-document.addEventListener('DOMContentLoaded', () =>
+document.addEventListener('DOMContentLoaded', () => {
+    document.dispatchEvent(new Event('navbar'));
+});
+
+document.addEventListener('navbar', () =>
 {
     let main = document.getElementById('tab-main');
     let books = document.getElementById('tab-books');
