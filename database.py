@@ -79,62 +79,39 @@ class DBHelper:
                 cursor.execute(open('sql/create_tables.sql').read()) # type: ignore
 
 
-    def auth(self, data: dict) -> User | None:
+    def total_notes_count(self) -> int:
+        with self.__database.cursor() as cursor:
+            cursor.execute(f'SELECT COUNT("id") FROM "{DBHelper.__TABLE_NOTES}"')
+            return result[0] if (result := cursor.fetchone()) else 0
 
-        if not all((auth_date := data.get('auth_date', None), id := data.get('id', None), first_name := data.get('first_name', None))):
-            return None
 
-        auth_date = int(auth_date)
-        id = int(id)
+    def create_user(self, id: int, username: str | None, first_name: str, last_name: str | None) -> bool:
+        try:
+            with self.__database.cursor() as cursor:
+                cursor.execute(f'INSERT INTO {DBHelper.__TABLE_USERS} VALUES (%s, %s, %s, %s)', (id, username, first_name, last_name))
+            return True
+        except psycopg.IntegrityError:
+            return True
+        except:
+            raise
 
-        if datetime.utcnow().timestamp() - auth_date > 3600:
-            return None
 
+    def get_user(self, id: int) -> User | None:
         with self.__database.cursor() as cursor:
             cursor.execute(f'SELECT * FROM {DBHelper.__TABLE_USERS} WHERE "id" = %s', (id, ))
-            result = cursor.fetchone()
-
-        if result:
-            return User(result[0], result[1], result[2], result[3])
-
-        try:
-            with self.__database.cursor() as cursor:
-                cursor.execute(f'INSERT INTO "{DBHelper.__TABLE_USERS}" VALUES (%s, %s, %s, %s)', (id, data.get('username', None), first_name, data.get('last_name', None)))
-        except:
-            return None
-
-        return User(id, data.get('username', None), first_name, data.get('last_name', None))
-
-
-    def total_notes_count(self) -> int:
-        try:
-            with self.__database.cursor() as cursor:
-                cursor.execute(f'SELECT COUNT("id") FROM "{DBHelper.__TABLE_NOTES}"')
-                count = result[0] if (result := cursor.fetchone()) else 0
-            return count
-        except:
-            return 0
+            return User(*result) if (result := cursor.fetchone()) else None
 
 
     def user_notes_count(self, user_id: int) -> int:
-        try:
-            with self.__database.cursor() as cursor:
-                cursor.execute(f'SELECT COUNT("id") FROM "{DBHelper.__TABLE_NOTES}" WHERE "owner_id" = %s', (user_id, ))
-                count = result[0] if (result := cursor.fetchone()) else 0
-            return count
-        except:
-            return 0
+        with self.__database.cursor() as cursor:
+            cursor.execute(f'SELECT COUNT("id") FROM "{DBHelper.__TABLE_NOTES}" WHERE "owner_id" = %s', (user_id, ))
+            return result[0] if (result := cursor.fetchone()) else 0
 
 
     def user_books_count(self, user_id: int) -> int:
-        try:
-            with self.__database.cursor() as cursor:
-                cursor.execute(f'SELECT COUNT("id") FROM "{DBHelper.__TABLE_BOOKS}" WHERE "owner_id" = %s', (user_id, ))
-                result = cursor.fetchone()
-                count = result[0] if result else 0
-            return count
-        except:
-            return 0
+        with self.__database.cursor() as cursor:
+            cursor.execute(f'SELECT COUNT("id") FROM "{DBHelper.__TABLE_BOOKS}" WHERE "owner_id" = %s', (user_id, ))
+            return result[0] if (result := cursor.fetchone()) else 0
 
 
     def get_books(self, user_id: int) -> list[tuple[Book, int]] | None:
@@ -163,18 +140,18 @@ class DBHelper:
         try:
             with self.__database.cursor() as cursor:
                 cursor.execute(f'INSERT INTO "{DBHelper.__TABLE_BOOKS}" ("owner_id", "title") VALUES (%s, %s)', (owner_id, title))
+            return True
         except:
             return False
-        return True
 
 
     def delete_book(self, owner_id: int, book_id: UUID) -> bool:
         try:
             with self.__database.cursor() as cursor:
                 cursor.execute(f'DELETE FROM "{DBHelper.__TABLE_BOOKS}" WHERE "owner_id" = %s AND "id" = %s', (owner_id, book_id))
+            return True
         except:
             return False
-        return True
 
 
     def get_notes(self, owner_id: int, book_id: UUID) -> list[Note] | None:

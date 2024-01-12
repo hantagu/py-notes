@@ -1,14 +1,16 @@
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', () =>
+{
     document.dispatchEvent(new Event('navbar'));
 });
 
+
 document.addEventListener('navbar', () =>
 {
-    let main = document.getElementById('tab-main');
-    let books = document.getElementById('tab-books');
-    let task_lists = document.getElementById('tab-task-lists');
+    let main = document.getElementById('tab_main');
+    let books = document.getElementById('tab_books');
+    let task_lists = document.getElementById('tab_task_lists');
     let login = document.getElementById('telegram-login-T6h4dWpVNnbot');
-    let logout = document.getElementById('tab-logout');
+    let logout = document.getElementById('tab_logout');
 
     if (sessionStorage.getItem('auth_token'))
     {
@@ -37,7 +39,7 @@ document.addEventListener('navbar', () =>
         case '/books':
             books.firstChild.classList.add('active');
             break;
-        case '/task-lists':
+        case '/task_lists':
             task_lists.firstChild.classList.add('active');
             break;
     }

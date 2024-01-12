@@ -4,9 +4,9 @@
 
 <div class="card">
     <div class="card-header">Создать новую записную книжку</div>
-    <form method="post" action="/method/create-book">
+    <form method="post" action="/method/create_book" id="form_create_book">
         <div class="card-body">
-            <input type="text" class="form-control" name="title" required placeholder="Название">
+            <input type="text" class="form-control" name="title" id="form_create_book_title" required placeholder="Название">
         </div>
         <div class="card-footer d-flex justify-content-end justify-content-md-start">
             <input type="submit" class="btn btn-success" value="Создать">
@@ -14,25 +14,25 @@
     </form>
 </div>
 
-{% if not books %}
-<div class="d-flex justify-content-center mt-4 text-secondary fst-italic">У вас пока ещё нет ни одной записной книжки</div>
-{% else %}
-{% for book, notes in books %}
-<div class="card mt-4">
-    <div class="card-header">{{book.title}}</div>
-    <div class="card-body">Заметок: {{notes}}</div>
-    <div class="card-footer d-flex">
-        <form method="get" action="/notes" class="me-auto">
-            <input type="hidden" name="book_id" value="{{book.id}}">
-            <input type="submit" class="btn btn-outline-success" value="Просмотр">
-        </form>
-        <form method="post" action="/method/delete-book">
-            <input type="hidden" name="book_id" value="{{book.id}}">
-            <input type="submit" class="btn btn-outline-danger" value="Удалить">
-        </form>
-    </div>
+<div class="d-flex justify-content-center mt-4" id="spinner">
+    <div class="spinner-border spinner-border-sm" role="status"></div>
 </div>
-{% endfor %}
-{% endif %}
+
+<div class="d-flex justify-content-center mt-4 text-secondary fst-italic" id="no_books_warn" style="display: none !important;">
+    У вас пока ещё нет ни одной записной книжки
+</div>
+
+<script>
+    window.addEventListener('load', () =>
+    {
+        let spinner = document.getElementById('spinner');
+        let no_books_warn = document.getElementById('no_books_warn');
+
+        setTimeout(() => {
+            spinner.setAttribute('style', 'display: none !important;');
+            no_books_warn.setAttribute('style', '');
+        }, 5000);
+    });
+</script>
 
 {% endblock %}

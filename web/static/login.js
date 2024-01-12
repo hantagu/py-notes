@@ -1,4 +1,4 @@
-const onTelegramAuth = async (user) =>
+async function on_telegram_auth(user)
 {
     let response = await fetch('/method/login', {
         method: 'POST',
@@ -6,14 +6,18 @@ const onTelegramAuth = async (user) =>
         body: JSON.stringify(user)
     });
 
-    if (!response.ok) {
+    if (!response.ok)
+    {
         alert(`HTTP Error ${response.status}: ${response.statusText}`);
+        return;
     }
 
     let json_response = await response.json();
 
-    if (!json_response.ok) {
-        alert(`API Error: ${json_response.description}`)
+    if (!json_response.ok)
+    {
+        alert(`API Error: ${json_response.description}`);
+        return;
     }
 
     sessionStorage.setItem('auth_token', json_response.result.auth_token);
