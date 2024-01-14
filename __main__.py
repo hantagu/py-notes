@@ -20,6 +20,9 @@ from database import DBHelper, User
 
 
 HTTP_BAD_REQUEST = 400
+HTTP_UNAUTHORIZED = 401
+HTTP_NOT_FOUND = 404
+
 HTTP_INTERNAL_SERVER_ERROR = 500
 
 
@@ -99,7 +102,7 @@ def task_lists() -> Response:
 
 
 def APIError(http_code: int, description: str) -> Response:
-    r = make_response(json.dumps(OrderedDict([('ok', False), ('description', description)])), 400)
+    r = make_response(json.dumps(OrderedDict([('ok', False), ('description', description)])), http_code)
     r.content_type = 'application/json'
     return r
 
@@ -115,16 +118,17 @@ def APIResult(*result) -> Response:
 def login() -> Response:
 
     try:
-        arguments: dict[Any, Any] = json.loads(request.get_data())
+        json_request: dict[str, Any] = json.loads(request.get_data())
+        arguments: dict[str, Any] = json_request['arguments']
     except:
-        return APIError(HTTP_BAD_REQUEST, 'invalid body format')
+        return APIError(HTTP_BAD_REQUEST, 'invalid request format')
 
     try:
         hash = arguments['hash']
         id = int(arguments['id'])
         first_name = arguments['first_name']
         auth_date = int(arguments['auth_date'])
-    except:
+    except KeyError:
         return APIError(HTTP_BAD_REQUEST, 'not enough arguments')
 
     sorted_args = [(k, v) for k, v in sorted(arguments.items(), key=lambda x: x[0]) if k != 'hash']
@@ -142,6 +146,28 @@ def login() -> Response:
 
     auth_token = jwt.encode({'iss': 'https://91.215.155.252:443/', 'sub': id, 'iat': timestamp, 'exp': timestamp+86400}, app.secret_key)
     return APIResult(('auth_token', auth_token))
+
+
+@app.post(f'/{METHOD_GET_ME}')
+def get_me() -> Response:
+
+    try:
+        json_request: dict[str, Any] = json.loads(request.get_data())
+        auth_token: str = json_request['auth_token']
+    except:
+        return APIError(HTTP_BAD_REQUEST, 'invalid request format')
+
+    try:
+        decoded_token = jwt.decode(auth_token, app.secret_key, algorithms=[jwt.get_unverified_header(auth_token)['alg']])
+    except jwt.InvalidSignatureError:
+        return APIError(HTTP_UNAUTHORIZED, 'invalid token signature')
+    except jwt.ExpiredSignatureError:
+        return APIError(HTTP_UNAUTHORIZED, 'token has expired')
+
+    if (user := database.get_user(decoded_token['sub'])):
+        return APIResult(('id', user.id), ('username', user.username), ('first_name', user.first_name), ('last_name', user.last_name))
+    else:
+        return APIError(404, 'user not found')
 
 
 # @app.post(f'/{METHOD_VALIDATE_TOKEN}')

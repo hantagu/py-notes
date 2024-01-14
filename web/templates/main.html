@@ -2,6 +2,10 @@
 
 {% block content %}
 
+<div class="d-flex justify-content-center mt-4" id="spinner">
+    <div class="spinner-border spinner-border-sm" role="status"></div>
+</div>
+
 <div class="card" id="card_logged" style="display: none;">
     <div class="card-header" id="card_logged_header">Привет, %first_name</div>
     <div class="card-body" id="card_logged_body">Ник: %username, ID: %id</div>
@@ -9,12 +13,14 @@
 
 <div class="card" id="card_unlogged" style="display: none;">
     <div class="card-header" id="card_unlogged_header">Добро пожаловать</div>
-    <div class="card-body" id="card_unlogged_body">Войдите в свою учётную запись с помощью Telegram и вы сможете создавать заметки и списки дел. Сервис насчитывает уже целых %notes заметок</div>
+    <div class="card-body" id="card_unlogged_body">Войдите в свою учётную запись с помощью Telegram и вы сможете создавать заметки и списки задач. Сервис насчитывает уже целых %notes заметок и %task_lists списков задач.</div>
 </div>
 
 <script>
-    window.addEventListener('load', async () =>
+    document.addEventListener('DOMContentLoaded', async () =>
     {
+        let spinner = document.getElementById('spinner');
+
         let card_logged = document.getElementById('card_logged');
         let card_logged_header = document.getElementById('card_logged_header');
         let card_logged_body = document.getElementById('card_logged_body');
@@ -23,13 +29,24 @@
         let card_unlogged_header = document.getElementById('card_unlogged_header');
         let card_unlogged_body = document.getElementById('card_unlogged_body');
 
-        card_logged_header.innerText = card_logged_header.innerText.replace('%first_name', '???');
-        card_logged_body.innerText = card_logged_body.innerText.replace('%username', '???').replace('%id', '???');
-
         if (sessionStorage.getItem('auth_token'))
-            card_logged.style.display = '';
+        {
+            let response = await make_request(METHOD_GET_ME);
+            response = await response.json();
+
+            card_logged_header.innerText = card_logged_header.innerText.replace('%first_name', response.result.first_name);
+            card_logged_body.innerText = card_logged_body.innerText.replace('%username', response.result.username).replace('%id', response.result.id);
+
+            spinner.setAttribute(STYLE, DISPLAY_NONE);
+            card_unlogged.setAttribute(STYLE, DISPLAY_NONE);
+            card_logged.removeAttribute(STYLE);
+        }
         else
-            card_unlogged.style.display = '';
+        {
+            spinner.setAttribute(STYLE, DISPLAY_NONE);
+            card_unlogged.removeAttribute(STYLE);
+            card_logged.setAttribute(STYLE, DISPLAY_NONE);
+        }
     });
 </script>
 

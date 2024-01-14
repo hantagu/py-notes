@@ -72,7 +72,7 @@ class DBHelper:
         try:
             self.__database = psycopg.connect(f'host={host} port={port} user={user} password={password} dbname={dbname}', autocommit=True)
         except:
-            print('Не удалось соединиться с БД')
+            print('database connection failed')
             sys.exit(1)
 
         with self.__database.cursor() as cursor:
@@ -90,10 +90,8 @@ class DBHelper:
             with self.__database.cursor() as cursor:
                 cursor.execute(f'INSERT INTO {DBHelper.__TABLE_USERS} VALUES (%s, %s, %s, %s)', (id, username, first_name, last_name))
             return True
-        except psycopg.IntegrityError:
-            return True
         except:
-            raise
+            return False
 
 
     def get_user(self, id: int) -> User | None:

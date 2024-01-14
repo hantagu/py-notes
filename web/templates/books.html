@@ -23,14 +23,14 @@
 </div>
 
 <script>
-    window.addEventListener('load', () =>
+    document.addEventListener('DOMContentLoaded', () =>
     {
         let spinner = document.getElementById('spinner');
         let no_books_warn = document.getElementById('no_books_warn');
 
         setTimeout(() => {
-            spinner.setAttribute('style', 'display: none !important;');
-            no_books_warn.setAttribute('style', '');
+            spinner.setAttribute(STYLE, DISPLAY_NONE);
+            no_books_warn.removeAttribute(STYLE);
         }, 5000);
     });
 </script>
