@@ -2,22 +2,21 @@ document.addEventListener('login', async event =>
 {
     let response = await make_request(METHOD_LOGIN, event.detail);
 
-    if (!response)
-    {
-        alert(`HTTP error occured`);
-        return;
-    }
-
-    response = await response.json();
-
     if (!response.ok)
     {
-        console.log(response);
-        alert(`API error: ${response.description}`);
+        console.error(`(login) HTTP Error: ${response.status} ${response.statusText}`)
         return;
     }
 
-    sessionStorage.setItem('auth_token', response.result.auth_token);
+    let json_response = await response.json();
+
+    if (!json_response.ok)
+    {
+        console.error(`(login) API Error: ${json_response.description}`);
+        return;
+    }
+
+    sessionStorage.setItem('auth_token', json_response.result.auth_token);
     window.location.replace('/');
 });
 

@@ -1,5 +1,5 @@
 import os
-from time import time
+from time import time, sleep
 import json
 
 from uuid import UUID
@@ -42,6 +42,7 @@ METHOD_DELETE_TASK_LIST = 'method/delete_task_list'
 
 METHOD_LOGIN = 'method/login'
 METHOD_GET_ME = 'method/get_me'
+METHOD_GET_STATISTICS = 'method/get_statistics'
 
 
 load_dotenv()
@@ -57,27 +58,6 @@ ctx.load_cert_chain(certfile=os.environ['TLS_CERT'], keyfile=os.environ['TLS_KEY
 
 
 database = DBHelper(os.environ['POSTGRES_HOST'], int(os.environ['POSTGRES_PORT']), os.environ['POSTGRES_USER'], os.environ['POSTGRES_PASSWD'], os.environ['POSTGRES_DBNAME'])
-
-
-# def template(view_name: str, user: User | None, **kwargs) -> Response:
-#     resp = make_response(render_template(f'{view_name}.html', page=view_name, user=user, **kwargs))
-#     return resp
-
-
-# def auth_splitted(f: Callable[[], tuple[Callable[[User], Response], Callable[[], Response]]]) -> Callable[[], Response]:
-#     def wrapper() -> Response:
-#         user = database.auth(session) # type: ignore
-#         return f()[0](user) if user else f()[1]()
-#     wrapper.__name__ = f.__name__
-#     return wrapper
-
-
-# def auth_joined(f: Callable[[], Callable[[User | None], Response]]) -> Callable[[], Response]:
-#     def wrapper() -> Response:
-#         user = database.auth(session) # type: ignore
-#         return f()(user)
-#     wrapper.__name__ = f.__name__
-#     return wrapper
 
 
 @app.get('/')
@@ -101,6 +81,50 @@ def task_lists() -> Response:
 
 
 
+def APIRequest(check_token: bool) -> Callable[[Callable[[dict[str, Any]], Response]], Callable[[], Response]] | Callable[[Callable[[dict[str, Any], dict[str, Any]], Response]], Callable[[], Response]]:
+
+    def wrapper(f: Callable[[dict[str, Any]], Response]) -> Callable[[], Response]:
+
+        def inner() -> Response:
+            try:
+                params: dict[str, Any] = json.loads(request.get_data())
+            except:
+                return APIError(HTTP_BAD_REQUEST, 'invalid request format')
+            return f(params)
+
+        inner.__name__ = f.__name__
+        return inner
+
+    def wrapper_token(f: Callable[[dict[str, Any], dict[str, Any]], Response]) -> Callable[[], Response]:
+
+        def inner() -> Response:
+
+            try:
+                params: dict[str, Any] = json.loads(request.get_data())
+            except:
+                return APIError(HTTP_BAD_REQUEST, 'invalid request format')
+
+            try:
+                raw_token: str = request.headers['X-Notes-Auth-Token']
+            except:
+                return APIError(HTTP_BAD_REQUEST, 'token not found')
+
+            try:
+                token: dict[str, Any] = jwt.decode(raw_token, app.secret_key, algorithms=[jwt.get_unverified_header(raw_token)['alg']])
+            except jwt.InvalidSignatureError:
+                return APIError(HTTP_UNAUTHORIZED, 'invalid token signature')
+            except jwt.ExpiredSignatureError:
+                return APIError(HTTP_UNAUTHORIZED, 'token has expired')
+
+            return f(token, params)
+
+        inner.__name__ = f.__name__
+        return inner
+
+    return wrapper_token if check_token else wrapper
+
+
+
 def APIError(http_code: int, description: str) -> Response:
     r = make_response(json.dumps(OrderedDict([('ok', False), ('description', description)])), http_code)
     r.content_type = 'application/json'
@@ -115,23 +139,18 @@ def APIResult(*result) -> Response:
 
 
 @app.post(f'/{METHOD_LOGIN}')
-def login() -> Response:
+@APIRequest(False) # type: ignore
+def login(params: dict[str, Any]) -> Response:
 
     try:
-        json_request: dict[str, Any] = json.loads(request.get_data())
-        arguments: dict[str, Any] = json_request['arguments']
-    except:
-        return APIError(HTTP_BAD_REQUEST, 'invalid request format')
-
-    try:
-        hash = arguments['hash']
-        id = int(arguments['id'])
-        first_name = arguments['first_name']
-        auth_date = int(arguments['auth_date'])
+        hash = params['hash']
+        id = int(params['id'])
+        first_name = params['first_name']
+        auth_date = int(params['auth_date'])
     except KeyError:
         return APIError(HTTP_BAD_REQUEST, 'not enough arguments')
 
-    sorted_args = [(k, v) for k, v in sorted(arguments.items(), key=lambda x: x[0]) if k != 'hash']
+    sorted_args = [(k, v) for k, v in sorted(params.items(), key=lambda x: x[0]) if k != 'hash']
     data_check_string = '\n'.join([f'{k}={v}' for k, v in sorted_args])
     secret_key = sha256(bot_token.encode()).digest()
 
@@ -142,84 +161,25 @@ def login() -> Response:
     if timestamp - auth_date > 300:
         return APIError(HTTP_BAD_REQUEST, 'data is outdated')
 
-    database.create_user(id, arguments.get('username', None), first_name, arguments.get('last_name', None))
+    database.create_user(id, params.get('username', None), first_name, params.get('last_name', None))
 
     auth_token = jwt.encode({'iss': 'https://91.215.155.252:443/', 'sub': id, 'iat': timestamp, 'exp': timestamp+86400}, app.secret_key)
     return APIResult(('auth_token', auth_token))
 
 
 @app.post(f'/{METHOD_GET_ME}')
-def get_me() -> Response:
-
-    try:
-        json_request: dict[str, Any] = json.loads(request.get_data())
-        auth_token: str = json_request['auth_token']
-    except:
-        return APIError(HTTP_BAD_REQUEST, 'invalid request format')
-
-    try:
-        decoded_token = jwt.decode(auth_token, app.secret_key, algorithms=[jwt.get_unverified_header(auth_token)['alg']])
-    except jwt.InvalidSignatureError:
-        return APIError(HTTP_UNAUTHORIZED, 'invalid token signature')
-    except jwt.ExpiredSignatureError:
-        return APIError(HTTP_UNAUTHORIZED, 'token has expired')
-
-    if (user := database.get_user(decoded_token['sub'])):
+@APIRequest(True) # type: ignore
+def get_me(token: dict[str, Any], _: dict[str, Any]) -> Response:
+    if (user := database.get_user(token['sub'])):
         return APIResult(('id', user.id), ('username', user.username), ('first_name', user.first_name), ('last_name', user.last_name))
     else:
-        return APIError(404, 'user not found')
+        return APIError(HTTP_NOT_FOUND, 'user not found')
 
 
-# @app.post(f'/{METHOD_VALIDATE_TOKEN}')
-# def validate_token() -> Response:
-
-#     try:
-#         data: dict[Any, Any] = request.json # type: ignore
-#     except:
-#         return jsonify(OrderedDict([('ok', False), ('description', 'body is not a json')]))
-
-#     if not (encoded_token := str(data.get('auth_token', ''))):
-#         return jsonify(OrderedDict([('ok', False), ('description', 'not enough arguments')]))
-
-#     decoded_token: dict[Any, Any] = jwt.decode(encoded_token, app.secret_key, algorithms=[jwt.get_unverified_header(encoded_token)['alg']])
-
-#     if int(time()) > decoded_token['exp']:
-#         return jsonify(OrderedDict([('ok', False), ('description', 'token expired')]))
-
-#     return jsonify(OrderedDict([('ok', True), ('result', decoded_token)]))
-
-# @app.get(f'/{METHOD_LOGIN}')
-# def login() -> Response:
-
-#     if not (tg_hash := request.args.get('hash')):
-#         return redirect(url_for(error.__name__, msg='Параметр `hash` отсутствует в ответе от Telegram')) # type: ignore
-
-#     sorted_args = [(k, v) for k, v in sorted(request.args.items(), key=lambda x: x[0]) if k != 'hash']
-
-#     data_check_string = '\n'.join([f'{k}={v}' for k, v in sorted_args])
-#     secret_key = hashlib.sha256(bot_token.encode()).digest()
-
-#     if hmac.new(secret_key, data_check_string.encode(), hashlib.sha256).hexdigest() != tg_hash:
-#         return redirect(url_for(error.__name__, msg='Нарушена целостность данных, полученных от Telegram')) # type: ignore
-
-#     for k, v in sorted_args:
-#         session[k] = v
-
-#     return redirect(url_for(main.__name__)) # type: ignore
-
-
-# @app.get(f'/{PAGE_BOOKS}')
-# @auth_splitted
-# def books() -> tuple[Callable[[User], Response], Callable[[], Response]]:
-
-#     def ok(user: User) -> Response:
-#         books = database.get_books(user.id)
-#         return template(PAGE_BOOKS, user, books=books)
-
-#     def err() -> Response:
-#         return redirect(url_for(error.__name__, msg='Ошибка аутентификации')) # type: ignore
-
-#     return ok, err
+@app.post(f'/{METHOD_GET_STATISTICS}')
+@APIRequest(False) # type: ignore
+def get_statistics(_: dict[str, Any]):
+    return APIResult(('notes', -3), ('task_lists', 0.4))
 
 
 # @app.post(f'/{METHOD_CREATE_BOOK}')
@@ -256,19 +216,6 @@ def get_me() -> Response:
 #     return ok, err
 
 
-# @app.get(f'/{PAGE_NOTES}')
-# @auth_splitted
-# def notes():
-
-#     def ok(user: User) -> Response:
-#         return template(PAGE_NOTES, user, book_id=request.args['book_id'], notes=database.get_notes(user.id, UUID(request.args['book_id'])))
-
-#     def err() -> Response:
-#         return redirect(url_for(error.__name__, msg='Ошибка аутентификации')) # type: ignore
-
-#     return ok, err
-
-
 # @app.post(f'/{METHOD_CREATE_NOTE}')
 # @auth_splitted
 # def create_note():
@@ -292,19 +239,6 @@ def get_me() -> Response:
 
 #     def ok(user: User) -> Response:
 #         return redirect(url_for(main.__name__)) # type: ignore
-
-#     def err() -> Response:
-#         return redirect(url_for(error.__name__, msg='Ошибка аутентификации')) # type: ignore
-
-#     return ok, err
-
-
-# @app.get(f'/{PAGE_TASK_LISTS}')
-# @auth_splitted
-# def task_lists():
-
-#     def ok(user: User) -> Response:
-#         return template(PAGE_TASK_LISTS, user, tasklists=database.get_tasklists(user.id))
 
 #     def err() -> Response:
 #         return redirect(url_for(error.__name__, msg='Ошибка аутентификации')) # type: ignore
