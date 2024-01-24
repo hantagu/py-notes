@@ -16,13 +16,11 @@
     </form>
 </div>
 
-{% if not notes %}
 <div class="d-flex justify-content-center mt-4 text-secondary fst-italic">В этой записной книжке ещё нет ни одной заметки</div>
-{% else %}
-{% for note in notes %}
+
 <div class="card mt-4">
-    <div class="card-header">{{note.title}}</div>
-    <div class="card-body">{{note.text}}</div>
+    <div class="card-header">note.title</div>
+    <div class="card-body">note.text</div>
     <div class="card-footer d-flex">
         <form method="post" action="/method/delete-note">
             <input type="hidden" name="book_id" value="{{book_id}}">
@@ -31,7 +29,5 @@
         </form>
     </div>
 </div>
-{% endfor %}
-{% endif %}
 
 {% endblock %}

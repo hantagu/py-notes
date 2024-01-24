@@ -21,13 +21,7 @@
     </form>
 </div>
 
-{% if not tasklists %}
 <div class="d-flex justify-content-center mt-4 text-secondary fst-italic">У вас пока ещё нет ни одного списка дел</div>
-{% else %}
-{% for tasklist in tasklists %}
-{{tasklist}}<br>
-{% endfor %}
-{% endif %}
 
 <script>
 

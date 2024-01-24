@@ -117,7 +117,7 @@ def task_lists() -> Response:
 @APIRequest(False) # type: ignore
 def get_statistics(_: dict[str, Any]):
     try:
-        return APIResult(('notes', database.total_notes_count()), ('task_lists', database.total_task_lists_count()))
+        return APIResult(('notes', database.total_notes_amount()), ('task_lists', database.total_task_lists_amount()))
     except:
         return APIError(HTTP.InternalServerError.value, 'failed to get statistics')
 

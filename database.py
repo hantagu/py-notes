@@ -13,10 +13,6 @@ class User:
         self.first_name = first_name
         self.last_name = last_name
 
-    @property
-    def name(self):
-        return f'{self.first_name} {self.last_name}' if self.last_name else self.first_name
-
 
 class Book:
 
@@ -45,9 +41,9 @@ class TaskList:
 
 class Task:
 
-    def __init__(self, id: UUID, tasklist_id: UUID, title: str, is_done: bool) -> None:
+    def __init__(self, id: UUID, task_list_id: UUID, title: str, is_done: bool) -> None:
         self.id = id
-        self.tasklist_id = tasklist_id
+        self.task_list_id = task_list_id
         self.title = title
         self.is_done = is_done
 
@@ -57,97 +53,99 @@ class DBHelper:
     __TABLE_USERS = 'users'
     __TABLE_BOOKS = 'books'
     __TABLE_NOTES = 'notes'
-    __TABLE_TASKLISTS = 'tasklists'
+    __TABLE_TASK_LISTS = 'task_lists'
     __TABLE_TASKS = 'tasks'
+
+
+    def __db_connect(self, host: str, port: int, user: str, password: str, dbname: str | None = None):
+        if dbname:
+            self.__database = psycopg.connect(f'host={host} port={port} user={user} password={password} dbname={dbname}', autocommit=True)
+        else:
+            self.__database = psycopg.connect(f'host={host} port={port} user={user} password={password}', autocommit=True)
 
 
     def __init__(self, host: str, port: int, user: str, password: str, dbname: str) -> None:
 
-        with psycopg.connect(f'host={host} port={port} user={user} password={password}', autocommit=True) as self.__database:
-            try:
-                self.__database.execute(f'CREATE DATABASE "{dbname}"') # type: ignore
-            except psycopg.errors.DuplicateDatabase:
-                pass
-
+        self.__db_connect(host, port, user, password)
         try:
-            self.__database = psycopg.connect(f'host={host} port={port} user={user} password={password} dbname={dbname}', autocommit=True)
-        except:
-            print('database connection failed')
-            sys.exit(1)
+            self.__database.execute(f'CREATE DATABASE "{dbname}"') # type: ignore
+        except psycopg.errors.DuplicateDatabase:
+            pass
+
+        self.__db_connect(host, port, user, password, dbname)
 
         with self.__database.cursor() as cursor:
-                cursor.execute(open('sql/create_tables.sql').read()) # type: ignore
+            cursor.execute(open('sql/create_tables.sql').read()) # type: ignore
 
 
-    def total_notes_count(self) -> int:
+    def total_notes_amount(self) -> int:
         with self.__database.cursor() as cursor:
             cursor.execute(f'SELECT COUNT("id") FROM "{DBHelper.__TABLE_NOTES}"')
             return result[0] if (result := cursor.fetchone()) else 0
 
-
-    def total_task_lists_count(self) -> int:
+    def total_task_lists_amount(self) -> int:
         with self.__database.cursor() as cursor:
-            cursor.execute(f'SELECT COUNT("id") FROM "{DBHelper.__TABLE_TASKLISTS}"')
+            cursor.execute(f'SELECT COUNT("id") FROM "{DBHelper.__TABLE_TASK_LISTS}"')
             return result[0] if (result := cursor.fetchone()) else 0
 
+
+    def get_user(self, id: int) -> User | None:
+        with self.__database.cursor() as cursor:
+            cursor.execute(f'SELECT * FROM "{DBHelper.__TABLE_USERS}" WHERE "id" = %s', (id, ))
+            return User(*result) if (result := cursor.fetchone()) else None
 
     def create_user(self, id: int, username: str | None, first_name: str, last_name: str | None) -> bool:
         try:
             with self.__database.cursor() as cursor:
-                cursor.execute(f'INSERT INTO {DBHelper.__TABLE_USERS} VALUES (%s, %s, %s, %s)', (id, username, first_name, last_name))
+                cursor.execute(f'INSERT INTO "{DBHelper.__TABLE_USERS}" VALUES (%s, %s, %s, %s)', (id, username, first_name, last_name))
             return True
         except:
             return False
 
 
-    def get_user(self, id: int) -> User | None:
-        with self.__database.cursor() as cursor:
-            cursor.execute(f'SELECT * FROM {DBHelper.__TABLE_USERS} WHERE "id" = %s', (id, ))
-            return User(*result) if (result := cursor.fetchone()) else None
-
-
-    def user_notes_count(self, user_id: int) -> int:
-        with self.__database.cursor() as cursor:
-            cursor.execute(f'SELECT COUNT("id") FROM "{DBHelper.__TABLE_NOTES}" WHERE "owner_id" = %s', (user_id, ))
-            return result[0] if (result := cursor.fetchone()) else 0
-
-
-    def user_books_count(self, user_id: int) -> int:
+    def user_books_amount(self, user_id: int) -> int:
         with self.__database.cursor() as cursor:
             cursor.execute(f'SELECT COUNT("id") FROM "{DBHelper.__TABLE_BOOKS}" WHERE "owner_id" = %s', (user_id, ))
+            return result[0] if (result := cursor.fetchone()) else 0
+
+    def user_task_lists_amount(self, user_id: int) -> int:
+        with self.__database.cursor() as cursor:
+            cursor.execute(f'SELECT COUNT("id") FROM "{DBHelper.__TABLE_TASK_LISTS}" WHERE "owner_id" = %s', (user_id, ))
             return result[0] if (result := cursor.fetchone()) else 0
 
 
     def get_books(self, user_id: int) -> list[tuple[Book, int]] | None:
         try:
             with self.__database.cursor() as cursor:
-                cursor.execute(f'SELECT * FROM "{DBHelper.__TABLE_BOOKS}" WHERE "owner_id" = %s ORDER BY "title"', (user_id, ))
+                cursor.execute(f'''
+                    SELECT "{DBHelper.__TABLE_BOOKS}".*, COUNT("{DBHelper.__TABLE_NOTES}"."id") AS "notes_amount"
+                    FROM "{DBHelper.__TABLE_BOOKS}" LEFT JOIN "{DBHelper.__TABLE_NOTES}" ON "{DBHelper.__TABLE_BOOKS}"."id" = "{DBHelper.__TABLE_NOTES}"."book_id"
+                    WHERE "{DBHelper.__TABLE_BOOKS}"."owner_id" = %s
+                    GROUP BY "{DBHelper.__TABLE_BOOKS}"."id"
+                    ORDER BY "{DBHelper.__TABLE_BOOKS}"."title"
+                ''', (user_id, ))
                 books_result = cursor.fetchall()
         except:
             return None
 
         books: list[tuple[Book, int]] = []
-
         for book in books_result:
-            try:
-                with self.__database.cursor() as cursor:
-                    cursor.execute(f'SELECT COUNT("id") FROM "{DBHelper.__TABLE_NOTES}" WHERE "book_id" = %s', (book[0], ))
-                    count = result[0] if (result := cursor.fetchone()) else 0
-            except:
-                return None
-            books.append((Book(*book), count))
+            (id, owner_id, title, notes_amount) = book
+            books.append((Book(id, owner_id, title), notes_amount))
 
         return books
-
 
     def create_book(self, owner_id: int, title: str) -> UUID | None:
         try:
             with self.__database.cursor() as cursor:
-                cursor.execute(f'INSERT INTO "{DBHelper.__TABLE_BOOKS}" ("owner_id", "title") VALUES (%s, %s)', (owner_id, title))
-            return True
+                cursor.execute(f'''
+                    INSERT INTO "${self.__TABLE_BOOKS}" ("owner_id", "title")
+                    VALUES (%s, %s)
+                    RETURNING "id"
+                ''', (owner_id, title))
+                return UUID(result[0]) if (result := cursor.fetchone()) else None
         except:
-            return False
-
+            return None
 
     def delete_book(self, owner_id: int, book_id: UUID) -> bool:
         try:
@@ -159,58 +157,23 @@ class DBHelper:
 
 
     def get_notes(self, owner_id: int, book_id: UUID) -> list[Note] | None:
-        try:
-            with self.__database.cursor() as cursor:
-                cursor.execute(f'SELECT * FROM "{DBHelper.__TABLE_NOTES}" WHERE "book_id" = %s', (book_id, ))
-                return [Note(*i) for i in cursor.fetchall()]
-        except:
-            return None
+        pass
 
-
-    def create_note(self, owner_id: int, book_id: UUID, title: str, text: str) -> bool:
-        try:
-            with self.__database.cursor() as cursor:
-                cursor.execute(f'INSERT INTO "{DBHelper.__TABLE_NOTES}" ("book_id", "title", "text") VALUES (%s, %s, %s)', (book_id, title, text))
-        except:
-            return False
-        return True
-
+    def create_note(self, owner_id: int, book_id: UUID, title: str, text: str) -> UUID | None:
+        pass
 
     def delete_note(self, owner_id: int, book_id: UUID, note_id: UUID) -> bool:
-        try:
-            with self.__database.cursor() as cursor:
-                cursor.execute(f'DELETE FROM "{DBHelper.__TABLE_NOTES}" WHERE "book_id" = %s AND "note_id" = %s', (book_id, note_id))
-        except:
-            return False
-        return True
+        pass
 
 
-    def get_tasklists(self, owner_id: int) -> list[TaskList] | None:
-        try:
-            with self.__database.cursor() as cursor:
-                cursor.execute(f'SELECT * FROM "{DBHelper.__TABLE_TASKLISTS}" WHERE "owner_id" = %s', (owner_id, ))
-                tasklists_result = cursor.fetchall()
-        except:
-            return None
+    def get_task_lists(self, owner_id: int) -> list[TaskList] | None:
+        pass
 
-        tasklists: list[TaskList] = []
-        for tasklist in tasklists_result:
-            tasklists.append(TaskList(*tasklist))
+    def create_task_list(self, owner_id: int, title: str, tasks: list[str]) -> UUID | None:
+        pass
 
-        return tasklists
-
-
-    def create_tasklist(self, owner_id: int, title: str, tasks: list[str]) -> bool:
-        try:
-            with self.__database.cursor() as cursor:
-                uuid = uuid4()
-                cursor.execute(f'INSERT INTO "{DBHelper.__TABLE_TASKLISTS}" ("id", "owner_id", "title") VALUES (%s, %s, %s)', (uuid, owner_id, title))
-                for task in tasks:
-                    cursor.execute(f'INSERT INTO {DBHelper.__TABLE_TASKS} ("tasklist_id", "text", "is_done") VALUES (%s, %s, %s)', (uuid, task, False))
-        except Exception as e:
-            print(e)
-            return False
-        return True
+    def delete_task_list(self, owner_id: int, task_list_id: UUID) -> bool:
+        pass
 
 
     def __del__(self):

@@ -45,17 +45,17 @@ CREATE TABLE IF NOT EXISTS "notes"
 );
 
 
-CREATE TABLE IF NOT EXISTS "tasklists"
+CREATE TABLE IF NOT EXISTS "task_lists"
 (
     "id" UUID NOT NULL DEFAULT gen_random_uuid(),
     "owner_id" INT NOT NULL,
 
     "title" VARCHAR(64) NOT NULL,
 
-    CONSTRAINT "pk_tasklist_id"
+    CONSTRAINT "pk_task_list_id"
         PRIMARY KEY ("id"),
 
-    CONSTRAINT "fk_tasklist_owner_id"
+    CONSTRAINT "fk_task_list_owner_id"
         FOREIGN KEY ("owner_id") REFERENCES "users"("id") ON DELETE CASCADE
 );
 
@@ -63,7 +63,7 @@ CREATE TABLE IF NOT EXISTS "tasklists"
 CREATE TABLE IF NOT EXISTS "tasks"
 (
     "id" UUID NOT NULL DEFAULT gen_random_uuid(),
-    "tasklist_id" UUID NOT NULL,
+    "task_list_id" UUID NOT NULL,
 
     "text" VARCHAR(64) NOT NULL,
     "is_done" BOOLEAN NOT NULL,
@@ -71,6 +71,6 @@ CREATE TABLE IF NOT EXISTS "tasks"
     CONSTRAINT "pk_task_id"
         PRIMARY KEY ("id"),
 
-    CONSTRAINT "fk_task_tasklist_id"
-        FOREIGN KEY ("tasklist_id") REFERENCES "tasklists"("id") ON DELETE CASCADE
+    CONSTRAINT "fk_task_task_list_id"
+        FOREIGN KEY ("task_list_id") REFERENCES "task_lists"("id") ON DELETE CASCADE
 )
