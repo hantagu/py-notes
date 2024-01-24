@@ -17,10 +17,7 @@ document.addEventListener('DOMContentLoaded', () =>
             html.setAttribute(DATA_BS_THEME, DARK);
 
         prefersColorScheme.addEventListener('change', event => {
-            if (event.matches)
-                html.setAttribute(DATA_BS_THEME, DARK);
-            else
-                html.setAttribute(DATA_BS_THEME, LIGHT);
+            html.setAttribute(DATA_BS_THEME, event.matches? DARK : LIGHT);
         });
     }
 

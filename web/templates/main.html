@@ -13,7 +13,7 @@
 
 <div class="card" id="card_unlogged" style="display: none;">
     <div class="card-header" id="card_unlogged_header">Добро пожаловать</div>
-    <div class="card-body" id="card_unlogged_body">Войдите в свою учётную запись с помощью Telegram и вы сможете создавать заметки и списки задач. Сервис насчитывает уже целых <span id="notes"></span> заметок и <span id="task_lists"></span> списков задач.</div>
+    <div class="card-body" id="card_unlogged_body">Войдите в свою учётную запись с помощью Telegram и вы сможете создавать заметки и списки задач. Сервис насчитывает уже <span id="notes"></span> и <span id="task_lists"></span>.</div>
 </div>
 
 <script>
@@ -54,8 +54,14 @@
             let response = await make_request(METHOD_GET_STATISTICS, {});
             let json_response = await response.json();
 
-            notes.innerText = json_response.result.notes;
-            task_lists.innerText = json_response.result.task_lists;
+            let plural = new Intl.PluralRules('ru');
+            let words = [
+                {one: 'заметка', few: 'заметки', many: 'заметок'},
+                {one: 'список дел', few: 'списка дел', many: 'списков дел'},
+            ]
+
+            notes.innerText = `${json_response.result.notes} ${words[0][plural.select(json_response.result.notes)]}`;
+            task_lists.innerText = `${json_response.result.task_lists} ${words[1][plural.select(json_response.result.task_lists)]}`;
 
             spinner.setAttribute(STYLE, DISPLAY_NONE);
             card_unlogged.removeAttribute(STYLE);

@@ -1,10 +1,10 @@
-document.addEventListener('login', async event =>
+document.addEventListener('auth', async event =>
 {
     let response = await make_request(METHOD_LOGIN, event.detail);
 
     if (!response.ok)
     {
-        console.error(`(login) HTTP Error: ${response.status} ${response.statusText}`)
+        console.error('[auth]', `HTTP Error: ${response.status} ${response.statusText}`);
         return;
     }
 
@@ -12,7 +12,7 @@ document.addEventListener('login', async event =>
 
     if (!json_response.ok)
     {
-        console.error(`(login) API Error: ${json_response.description}`);
+        console.error('[auth]', `API Error: ${json_response.description}`);
         return;
     }
 

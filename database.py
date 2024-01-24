@@ -85,6 +85,12 @@ class DBHelper:
             return result[0] if (result := cursor.fetchone()) else 0
 
 
+    def total_task_lists_count(self) -> int:
+        with self.__database.cursor() as cursor:
+            cursor.execute(f'SELECT COUNT("id") FROM "{DBHelper.__TABLE_TASKLISTS}"')
+            return result[0] if (result := cursor.fetchone()) else 0
+
+
     def create_user(self, id: int, username: str | None, first_name: str, last_name: str | None) -> bool:
         try:
             with self.__database.cursor() as cursor:
@@ -134,7 +140,7 @@ class DBHelper:
         return books
 
 
-    def create_book(self, owner_id: int, title: str) -> bool:
+    def create_book(self, owner_id: int, title: str) -> UUID | None:
         try:
             with self.__database.cursor() as cursor:
                 cursor.execute(f'INSERT INTO "{DBHelper.__TABLE_BOOKS}" ("owner_id", "title") VALUES (%s, %s)', (owner_id, title))
