@@ -78,103 +78,208 @@ class DBHelper:
             cursor.execute(open('sql/create_tables.sql').read()) # type: ignore
 
 
+
     def total_notes_amount(self) -> int:
         with self.__database.cursor() as cursor:
-            cursor.execute(f'SELECT COUNT("id") FROM "{DBHelper.__TABLE_NOTES}"')
+            cursor.execute(f'''
+                SELECT COUNT(1)
+                FROM "{DBHelper.__TABLE_NOTES}"
+            ''')
             return result[0] if (result := cursor.fetchone()) else 0
+
 
     def total_task_lists_amount(self) -> int:
         with self.__database.cursor() as cursor:
-            cursor.execute(f'SELECT COUNT("id") FROM "{DBHelper.__TABLE_TASK_LISTS}"')
+            cursor.execute(f'''
+                SELECT COUNT(1)
+                FROM "{DBHelper.__TABLE_TASK_LISTS}"
+            ''')
             return result[0] if (result := cursor.fetchone()) else 0
 
-
-    def get_user(self, id: int) -> User | None:
-        with self.__database.cursor() as cursor:
-            cursor.execute(f'SELECT * FROM "{DBHelper.__TABLE_USERS}" WHERE "id" = %s', (id, ))
-            return User(*result) if (result := cursor.fetchone()) else None
-
-    def create_user(self, id: int, username: str | None, first_name: str, last_name: str | None) -> bool:
-        try:
-            with self.__database.cursor() as cursor:
-                cursor.execute(f'INSERT INTO "{DBHelper.__TABLE_USERS}" VALUES (%s, %s, %s, %s)', (id, username, first_name, last_name))
-            return True
-        except:
-            return False
 
 
     def user_books_amount(self, user_id: int) -> int:
         with self.__database.cursor() as cursor:
-            cursor.execute(f'SELECT COUNT("id") FROM "{DBHelper.__TABLE_BOOKS}" WHERE "owner_id" = %s', (user_id, ))
+            cursor.execute(f'''
+                SELECT COUNT(1)
+                FROM "{DBHelper.__TABLE_BOOKS}"
+                WHERE "owner_id" = %s
+            ''', (user_id, ))
             return result[0] if (result := cursor.fetchone()) else 0
+
+
+    def user_notes_amount(self, user_id: int) -> int:
+        with self.__database.cursor() as cursor:
+            cursor.execute(f'''
+                SELECT COUNT(1)
+                FROM "{DBHelper.__TABLE_NOTES}"
+                WHERE "owner_id" = %s
+            ''', (user_id, ))
+            return result[0] if (result := cursor.fetchone()) else 0
+
 
     def user_task_lists_amount(self, user_id: int) -> int:
         with self.__database.cursor() as cursor:
-            cursor.execute(f'SELECT COUNT("id") FROM "{DBHelper.__TABLE_TASK_LISTS}" WHERE "owner_id" = %s', (user_id, ))
+            cursor.execute(f'''
+                SELECT COUNT(1)
+                FROM "{DBHelper.__TABLE_TASK_LISTS}"
+                WHERE "owner_id" = %s
+            ''', (user_id, ))
             return result[0] if (result := cursor.fetchone()) else 0
 
 
-    def get_books(self, user_id: int) -> list[tuple[Book, int]] | None:
-        try:
+
+    def get_user(self, id: int) -> User | None:
+        with self.__database.cursor() as cursor:
+            cursor.execute(f'''
+                SELECT *
+                FROM "{DBHelper.__TABLE_USERS}"
+                WHERE "id" = %s
+            ''', (id, ))
+            return User(*result) if (result := cursor.fetchone()) else None
+
+
+    def create_user(self, id: int, username: str | None, first_name: str, last_name: str | None):
+        with self.__database.cursor() as cursor:
+            cursor.execute(f'''
+                INSERT INTO "{DBHelper.__TABLE_USERS}"
+                VALUES (%s, %s, %s, %s)
+            ''', (id, username, first_name, last_name))
+
+
+
+    def get_books(self, user_id: int) -> list[tuple[Book, int]]:
+        with self.__database.cursor() as cursor:
+            cursor.execute(f'''
+                SELECT "{DBHelper.__TABLE_BOOKS}".*, COUNT("{DBHelper.__TABLE_NOTES}"."id") AS "notes_amount"
+                FROM "{DBHelper.__TABLE_BOOKS}" LEFT JOIN "{DBHelper.__TABLE_NOTES}" ON "{DBHelper.__TABLE_BOOKS}"."id" = "{DBHelper.__TABLE_NOTES}"."book_id"
+                WHERE "{DBHelper.__TABLE_BOOKS}"."owner_id" = %s
+                GROUP BY "{DBHelper.__TABLE_BOOKS}"."id"
+                ORDER BY "{DBHelper.__TABLE_BOOKS}"."title"
+            ''', (user_id, ))
+            return [(Book(*row[:-1]), row[-1]) for row in cursor.fetchall()]
+
+
+    def create_book(self, owner_id: int, title: str) -> Book:
+        with self.__database.cursor() as cursor:
+            cursor.execute(f'''
+                INSERT INTO "${self.__TABLE_BOOKS}" ("owner_id", "title")
+                VALUES (%s, %s)
+                RETURNING *
+            ''', (owner_id, title))
+            return Book(*cursor.fetchone()) # type: ignore
+
+
+    def delete_book(self, owner_id: int, book_id: UUID) -> Book | None:
+        with self.__database.cursor() as cursor:
+            cursor.execute(f'''
+                DELETE FROM "{DBHelper.__TABLE_BOOKS}"
+                WHERE "owner_id" = %s AND "id" = %s
+                RETURNING *
+            ''', (owner_id, book_id))
+            return Book(*result) if (result := cursor.fetchone()) else None
+
+
+
+    def get_notes(self, owner_id: int, book_id: UUID) -> list[Note]:
+        self.__check_user_book_exists(owner_id, book_id)
+        with self.__database.cursor() as cursor:
+            cursor.execute(f'''
+                SELECT *
+                FROM "{DBHelper.__TABLE_NOTES}"
+                WHERE "book_id" = %s
+            ''', (book_id, ))
+            return [Note(*result) for result in cursor.fetchall()]
+
+
+    def create_note(self, owner_id: int, book_id: UUID, title: str, text: str) -> Note:
+        self.__check_user_book_exists(owner_id, book_id)
+        with self.__database.cursor() as cursor:
+            cursor.execute(f'''
+                INSERT INTO "{DBHelper.__TABLE_NOTES}" ("book_id", "title", "text")
+                VALUES (%s, %s, %s)
+                RETURNING *
+            ''', (book_id, title, text))
+            return Note(*cursor.fetchone()) # type: ignore
+
+
+    def delete_note(self, owner_id: int, book_id: UUID, note_id: UUID) -> Note | None:
+        self.__check_user_book_exists(owner_id, book_id)
+        with self.__database.cursor() as cursor:
+            cursor.execute(f'''
+                DELETE FROM "{DBHelper.__TABLE_NOTES}"
+                WHERE "book_id" = %s AND "id" = %s
+                RETURNING *
+            ''', (book_id, note_id))
+
+
+
+    def get_task_lists(self, owner_id: int) -> list[tuple[TaskList, list[Task]]]:
+
+        with self.__database.cursor() as cursor:
+            cursor.execute(f'''
+                SELECT *
+                FROM "{DBHelper.__TABLE_TASK_LISTS}"
+                WHERE "owner_id" = %s
+            ''', (owner_id, ))
+            task_lists: list[TaskList] = [TaskList(*task_lists) for task_lists in cursor.fetchall()]
+
+        result: list[tuple[TaskList, list[Task]]] = []
+
+        for task_list in task_lists:
             with self.__database.cursor() as cursor:
                 cursor.execute(f'''
-                    SELECT "{DBHelper.__TABLE_BOOKS}".*, COUNT("{DBHelper.__TABLE_NOTES}"."id") AS "notes_amount"
-                    FROM "{DBHelper.__TABLE_BOOKS}" LEFT JOIN "{DBHelper.__TABLE_NOTES}" ON "{DBHelper.__TABLE_BOOKS}"."id" = "{DBHelper.__TABLE_NOTES}"."book_id"
-                    WHERE "{DBHelper.__TABLE_BOOKS}"."owner_id" = %s
-                    GROUP BY "{DBHelper.__TABLE_BOOKS}"."id"
-                    ORDER BY "{DBHelper.__TABLE_BOOKS}"."title"
-                ''', (user_id, ))
-                books_result = cursor.fetchall()
-        except:
-            return None
+                    SELECT *
+                    FROM "{DBHelper.__TABLE_TASKS}"
+                    WHERE "task_list_id" = %s
+                ''', (task_list.id, ))
+                tasks: list[Task] = [Task(*task) for task in cursor.fetchall()]
+            result.append((task_list, tasks))
 
-        books: list[tuple[Book, int]] = []
-        for book in books_result:
-            (id, owner_id, title, notes_amount) = book
-            books.append((Book(id, owner_id, title), notes_amount))
-
-        return books
-
-    def create_book(self, owner_id: int, title: str) -> UUID | None:
-        try:
-            with self.__database.cursor() as cursor:
-                cursor.execute(f'''
-                    INSERT INTO "${self.__TABLE_BOOKS}" ("owner_id", "title")
-                    VALUES (%s, %s)
-                    RETURNING "id"
-                ''', (owner_id, title))
-                return UUID(result[0]) if (result := cursor.fetchone()) else None
-        except:
-            return None
-
-    def delete_book(self, owner_id: int, book_id: UUID) -> bool:
-        try:
-            with self.__database.cursor() as cursor:
-                cursor.execute(f'DELETE FROM "{DBHelper.__TABLE_BOOKS}" WHERE "owner_id" = %s AND "id" = %s', (owner_id, book_id))
-            return True
-        except:
-            return False
+        return result
 
 
-    def get_notes(self, owner_id: int, book_id: UUID) -> list[Note] | None:
-        pass
-
-    def create_note(self, owner_id: int, book_id: UUID, title: str, text: str) -> UUID | None:
-        pass
-
-    def delete_note(self, owner_id: int, book_id: UUID, note_id: UUID) -> bool:
+    def create_task_list(self, owner_id: int, title: str, tasks: list[str]) -> TaskList:
         pass
 
 
-    def get_task_lists(self, owner_id: int) -> list[TaskList] | None:
+    def delete_task_list(self, owner_id: int, task_list_id: UUID) -> TaskList | None:
         pass
 
-    def create_task_list(self, owner_id: int, title: str, tasks: list[str]) -> UUID | None:
-        pass
 
-    def delete_task_list(self, owner_id: int, task_list_id: UUID) -> bool:
-        pass
+
+    def __check_user_book_exists(self, owner_id: int, book_id: UUID):
+        with self.__database.cursor() as cursor:
+            cursor.execute(f'''
+                SELECT EXISTS (
+                    SELECT 1
+                    FROM "{DBHelper.__TABLE_BOOKS}"
+                    WHERE "owner_id" = %s AND "id" = %s
+                    LIMIT 1
+                )
+            ''', (owner_id, book_id))
+            if not (result[0] if (result := cursor.fetchone()) else False):
+                raise NotExistsException
+
+
+    def __check_user_task_list_exists(self, owner_id: int, task_list_id: UUID):
+        with self.__database.cursor() as cursor:
+            cursor.execute(f'''
+                SELECT EXISTS (
+                    SELECT 1
+                    FROM "{DBHelper.__TABLE_TASK_LISTS}"
+                    WHERE "owner_id" = %s AND "id" = %s
+                    LIMIT 1
+                )
+            ''', (owner_id, task_list_id))
+            if not (result[0] if (result := cursor.fetchone()) else False):
+                raise NotExistsException
+
 
 
     def __del__(self):
         self.__database.close()
+
+
+class NotExistsException(Exception):
+    pass

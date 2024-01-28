@@ -21,6 +21,7 @@ class Page(enum.Enum):
 
 class Method(enum.Enum):
     GetStatistics = 'get_statistics'
+    GetUserStatistics = 'get_user_statistics'
     Login = 'login'
     GetMe = 'get_me'
 

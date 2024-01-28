@@ -1,27 +1,25 @@
-from math import e
 import os
 from time import time
 import json
 
-from uuid import UUID
 from hashlib import sha256
 import hmac
 from ssl import SSLContext, PROTOCOL_TLS_SERVER
 
-import enum
 from collections import OrderedDict
 from collections.abc import Callable
 from typing import Any
 
-from dotenv import load_dotenv
+import dotenv
 import jwt
+import psycopg
 from flask import Flask, Response, make_response, render_template, request
 
 from database import DBHelper
 from enums import HTTP, Page, Method
 
 
-load_dotenv()
+dotenv.load_dotenv()
 
 app = Flask(__name__, template_folder='web/templates', static_folder='web/static')
 app.secret_key = os.environ['APP_KEY']
@@ -146,7 +144,10 @@ def login(params: dict[str, Any]) -> Response:
     if timestamp - auth_date > 300:
         return APIError(HTTP.BadRequest.value, 'data is outdated')
 
-    database.create_user(id, params.get('username', None), first_name, params.get('last_name', None))
+    try:
+        database.create_user(id, params.get('username', None), first_name, params.get('last_name', None))
+    except psycopg.errors.UniqueViolation:
+        pass
 
     auth_token = jwt.encode({'iss': 'https://91.215.155.252:443/', 'sub': id, 'iat': timestamp, 'exp': timestamp+86400}, app.secret_key)
     return APIResult(('auth_token', auth_token))
@@ -155,20 +156,23 @@ def login(params: dict[str, Any]) -> Response:
 @app.post(f'/method/{Method.GetMe.value}')
 @APIRequest(True) # type: ignore
 def get_me(token: dict[str, Any], _: dict[str, Any]) -> Response:
-    if (user := database.get_user(token['sub'])):
-        return APIResult(('id', user.id), ('username', user.username), ('first_name', user.first_name), ('last_name', user.last_name))
-    else:
-        return APIError(HTTP.NotFound.value, 'user not found')
+    try:
+        if (user := database.get_user(token['sub'])):
+            return APIResult(('id', user.id), ('username', user.username), ('first_name', user.first_name), ('last_name', user.last_name))
+        else:
+            return APIError(HTTP.NotFound.value, 'user not found')
+    except:
+        return APIError(HTTP.InternalServerError.value, 'internal server error')
 
 
 @app.post(f'/method/{Method.GetBooks.value}')
 @APIRequest(True) # type: ignore
 def get_books(token: dict[str, Any], params: dict[str, Any]) -> Response:
-    books = database.get_books(token['sub'])
-    if books is None:
-        return APIError(HTTP.InternalServerError.value, 'internal server error')
-    else:
+    try:
+        books = database.get_books(token['sub'])
         return APIResult(('books', [{'id': book.id.hex, 'owner_id': book.owner_id, 'title': book.title, 'notes_amount': amount} for book, amount in books]))
+    except:
+        return APIError(HTTP.InternalServerError.value, 'internal server error')
 
 
 
