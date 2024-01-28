@@ -1,3 +1,4 @@
+from math import e
 import os
 from time import time
 import json
@@ -163,7 +164,12 @@ def get_me(token: dict[str, Any], _: dict[str, Any]) -> Response:
 @app.post(f'/method/{Method.GetBooks.value}')
 @APIRequest(True) # type: ignore
 def get_books(token: dict[str, Any], params: dict[str, Any]) -> Response:
-    return APIError(HTTP.NotImplemented.value, 'not implemented yet')
+    books = database.get_books(token['sub'])
+    if books is None:
+        return APIError(HTTP.InternalServerError.value, 'internal server error')
+    else:
+        return APIResult(('books', [{'id': book.id.hex, 'owner_id': book.owner_id, 'title': book.title, 'notes_amount': amount} for book, amount in books]))
+
 
 
 @app.post(f'/method/{Method.CreateBook.value}')
