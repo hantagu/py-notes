@@ -1,3 +1,4 @@
+from re import A
 import sys
 from uuid import UUID, uuid4
 from datetime import datetime
@@ -8,44 +9,44 @@ import psycopg
 class User:
 
     def __init__(self, id: int, username: str | None, first_name: str, last_name: str | None) -> None:
-        self.id = id
-        self.username = username
-        self.first_name = first_name
-        self.last_name = last_name
+        self.id: int = id
+        self.username: str | None = username
+        self.first_name: str = first_name
+        self.last_name: str | None = last_name
 
 
 class Book:
 
-    def __init__(self, id: UUID, owner_id: UUID, title: str) -> None:
-        self.id = id
-        self.owner_id = owner_id
-        self.title = title
+    def __init__(self, id: UUID, owner_id: int, title: str) -> None:
+        self.id: UUID = id
+        self.owner_id: int = owner_id
+        self.title: str = title
 
 
 class Note:
 
     def __init__(self, id: UUID, book_id: UUID, title: str, text: str) -> None:
-        self.id = id
-        self.book_id = book_id
-        self.title = title
-        self.text = text
+        self.id: UUID = id
+        self.book_id: UUID = book_id
+        self.title: str = title
+        self.text: str = text
 
 
 class TaskList:
 
-    def __init__(self, id: UUID, owner_id: UUID, title: str) -> None:
-        self.id = id
-        self.owner_id = owner_id
-        self.title = title
+    def __init__(self, id: UUID, owner_id: int, title: str) -> None:
+        self.id: UUID = id
+        self.owner_id: int = owner_id
+        self.title: str = title
 
 
 class Task:
 
     def __init__(self, id: UUID, task_list_id: UUID, title: str, is_done: bool) -> None:
-        self.id = id
-        self.task_list_id = task_list_id
-        self.title = title
-        self.is_done = is_done
+        self.id: UUID = id
+        self.task_list_id: UUID = task_list_id
+        self.title: str = title
+        self.is_done: bool = is_done
 
 
 class DBHelper:
@@ -163,7 +164,7 @@ class DBHelper:
     def create_book(self, owner_id: int, title: str) -> Book:
         with self.__database.cursor() as cursor:
             cursor.execute(f'''
-                INSERT INTO "${self.__TABLE_BOOKS}" ("owner_id", "title")
+                INSERT INTO "{self.__TABLE_BOOKS}" ("owner_id", "title")
                 VALUES (%s, %s)
                 RETURNING *
             ''', (owner_id, title))
@@ -215,7 +216,6 @@ class DBHelper:
 
 
     def get_task_lists(self, owner_id: int) -> list[tuple[TaskList, list[Task]]]:
-
         with self.__database.cursor() as cursor:
             cursor.execute(f'''
                 SELECT *
@@ -225,7 +225,6 @@ class DBHelper:
             task_lists: list[TaskList] = [TaskList(*task_lists) for task_lists in cursor.fetchall()]
 
         result: list[tuple[TaskList, list[Task]]] = []
-
         for task_list in task_lists:
             with self.__database.cursor() as cursor:
                 cursor.execute(f'''
@@ -239,12 +238,34 @@ class DBHelper:
         return result
 
 
-    def create_task_list(self, owner_id: int, title: str, tasks: list[str]) -> TaskList:
-        pass
+    def create_task_list(self, owner_id: int, title: str, tasks: list[str]) -> tuple[TaskList, list[Task]]:
+        with self.__database.cursor() as cursor:
+            cursor.execute(f'''
+                INSERT INTO "{DBHelper.__TABLE_TASK_LISTS}" ("owner_id", "title")
+                VALUES (%s, %s)
+                RETURNING *
+            ''', (owner_id, title))
+            _tasklist: TaskList = TaskList(*cursor.fetchone()) # type: ignore
+
+        with self.__database.cursor() as cursor:
+            cursor.executemany(f'''
+                INSERT INTO "{DBHelper.__TABLE_TASKS}" ("task_list_id", "text", "is_done")
+                VALUES (%s, %s, %s)
+                RETURNING *
+            ''', [(_tasklist.id, task) for task in tasks])
+            _tasks: list[Task] = [Task(*task) for task in cursor.fetchall()]
+
+        return _tasklist, _tasks
 
 
     def delete_task_list(self, owner_id: int, task_list_id: UUID) -> TaskList | None:
-        pass
+        with self.__database.cursor() as cursor:
+            cursor.execute(f'''
+                DELETE FROM "{DBHelper.__TABLE_TASK_LISTS}"
+                WHERE "owner_id" = %s AND "id" = %s
+                RETURNING *
+            ''', (owner_id, task_list_id))
+            return TaskList(*result) if (result := cursor.fetchone()) else None
 
 
 

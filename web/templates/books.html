@@ -1,10 +1,8 @@
 {% extends "base.html" %}
-
 {% block content %}
-
 <div class="card">
     <div class="card-header">Создать новую записную книжку</div>
-    <form method="post" action="/method/create_book" id="form_create_book">
+    <form id="form_create_book" onsubmit="document.dispatchEvent(new CustomEvent('create_book', {'detail': this}));">
         <div class="card-body">
             <input type="text" class="form-control" name="title" id="form_create_book_title" required placeholder="Название">
         </div>
@@ -15,24 +13,55 @@
 </div>
 
 <div class="d-flex justify-content-center mt-4" id="spinner">
-    <div class="spinner-border spinner-border-sm" role="status"></div>
+    <div class="spinner-border spinner-border-sm"></div>
 </div>
 
 <div class="d-flex justify-content-center mt-4 text-secondary fst-italic" id="no_books_warn" style="display: none !important;">
     У вас пока ещё нет ни одной записной книжки
 </div>
 
+<div id="books">
+    <!-- <div class="card">
+        <form id="///">
+            <div class="card-header">TITLE</div>
+            <div class="card-body">NOTES</div>
+            <div class="card-footer">
+                <input type="submit" class="btn btn-danger" value="">
+            </div>
+        </form>
+    </div> -->
+</div>
+
 <script>
-    document.addEventListener('DOMContentLoaded', () =>
+    document.addEventListener('DOMContentLoaded', async () =>
+    {
+        let form_create_book = document.getElementById('form_create_book');
+
+        form_create_book.addEventListener('submit', async e =>
+        {
+            e.preventDefault();
+        });
+    });
+
+    document.addEventListener('book_update', async e =>
     {
         let spinner = document.getElementById('spinner');
         let no_books_warn = document.getElementById('no_books_warn');
+        let books = document.getElementById('books');
 
-        setTimeout(() => {
-            spinner.setAttribute(STYLE, DISPLAY_NONE);
-            no_books_warn.removeAttribute(STYLE);
-        }, 5000);
+        let response = await make_request(METHOD_GET_BOOKS);
+        let json_response = await response.json();
+
+        json_response.result.books.forEach(book => {});
+
+        json_response.result.books.forEach(element =>
+        {
+            let card = document.createElement('div');
+            card.classList.add('card');
+
+            let form = document.createElement('form');
+            form.id = '';
+        });
     });
 </script>
-
 {% endblock %}

@@ -1,9 +1,7 @@
 {% extends "base.html" %}
-
 {% block content %}
-
 <div class="d-flex justify-content-center mt-4" id="spinner">
-    <div class="spinner-border spinner-border-sm" role="status"></div>
+    <div class="spinner-border spinner-border-sm"></div>
 </div>
 
 <div class="card" id="card_logged" style="display: none;">
@@ -35,12 +33,12 @@
             let username = document.getElementById('username');
             let first_name = document.getElementById('first_name');
 
-            let response = await make_request(METHOD_GET_ME, {});
+            let response = await make_request(METHOD_GET_ME);
             let json_response = await response.json();
 
-            id.innerText = json_response.result.id;
-            username.innerText = json_response.result.username;
-            first_name.innerText = json_response.result.first_name;
+            id.innerText = json_response.result.user.id;
+            username.innerText = json_response.result.user.username;
+            first_name.innerText = json_response.result.user.first_name;
 
             spinner.setAttribute(STYLE, DISPLAY_NONE);
             card_unlogged.setAttribute(STYLE, DISPLAY_NONE);
@@ -51,7 +49,7 @@
             let notes = document.getElementById('notes');
             let task_lists = document.getElementById('task_lists');
 
-            let response = await make_request(METHOD_GET_STATISTICS, {});
+            let response = await make_request(METHOD_GET_STATISTICS);
             let json_response = await response.json();
 
             let plural = new Intl.PluralRules('ru');
@@ -60,8 +58,8 @@
                 {one: 'список дел', few: 'списка дел', many: 'списков дел'},
             ]
 
-            notes.innerText = `${json_response.result.notes} ${words[0][plural.select(json_response.result.notes)]}`;
-            task_lists.innerText = `${json_response.result.task_lists} ${words[1][plural.select(json_response.result.task_lists)]}`;
+            notes.innerText = `${json_response.result.statistics.notes} ${words[0][plural.select(json_response.result.statistics.notes)]}`;
+            task_lists.innerText = `${json_response.result.statistics.task_lists} ${words[1][plural.select(json_response.result.statistics.task_lists)]}`;
 
             spinner.setAttribute(STYLE, DISPLAY_NONE);
             card_unlogged.removeAttribute(STYLE);
@@ -69,5 +67,4 @@
         }
     });
 </script>
-
 {% endblock %}
