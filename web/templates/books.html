@@ -1,15 +1,16 @@
 {% extends "base.html" %}
 {% block content %}
+<div class="alert alert-danger" id="alert" style="display: none !important;">
+</div>
+
 <div class="card">
     <div class="card-header">Создать новую записную книжку</div>
-    <form id="form_create_book">
-        <div class="card-body">
-            <input type="text" class="form-control" name="title" id="form_create_book_title" required placeholder="Название">
-        </div>
-        <div class="card-footer d-flex justify-content-end justify-content-md-start">
-            <input type="submit" class="btn btn-success" value="Создать">
-        </div>
-    </form>
+    <div class="card-body">
+        <input type="text" class="form-control" id="create_book_title" placeholder="Название">
+    </div>
+    <div class="card-footer">
+        <button type="button" class="btn btn-outline-success" id="create_book_submit">Создать</button>
+    </div>
 </div>
 
 <div class="d-flex justify-content-center mt-4" id="spinner">
@@ -21,67 +22,111 @@
 </div>
 
 <div id="books">
-    <!-- <div class="card">
-        <form id="///">
-            <div class="card-header">TITLE</div>
-            <div class="card-body">NOTES</div>
-            <div class="card-footer">
-                <input type="submit" class="btn btn-danger" value="">
-            </div>
-        </form>
-    </div> -->
 </div>
 
 <script>
     document.addEventListener('DOMContentLoaded', async () =>
     {
-        let form_create_book = document.getElementById('form_create_book');
-        let books = document.getElementById('books');
+        const create_book_title = document.getElementById('create_book_title');
+        const create_book_submit = document.getElementById('create_book_submit');
+        const books = document.getElementById('books');
 
-        let spinner = document.getElementById('spinner');
-        let no_books_warn = document.getElementById('no_books_warn');
+        const spinner = document.getElementById('spinner');
+        const alert = document.getElementById('alert');
+        const no_books_warn = document.getElementById('no_books_warn');
 
-        let response = await make_request(METHOD_GET_BOOKS);
-        let json_response = await response.json();
-
-        spinner.setAttribute(STYLE, DISPLAY_NONE);
-
-        json_response.result.books.forEach(book =>
+        function create_book_list_item(book)
         {
-            let card = document.createElement('div');
+            const card = document.createElement('div');
+            card.id = `book_${book.id}`;
             card.classList.add('card');
             card.classList.add('mt-4');
 
-            let card_header = document.createElement('div');
+            const card_header = document.createElement('div');
             card_header.classList.add('card-header');
             card_header.innerHTML = book.title;
 
-            let card_body = document.createElement('div');
+            const card_body = document.createElement('div');
             card_body.classList.add('card-body');
-            card_body.innerHTML = `Заметок: ${book.notes_amount}`;
+            card_body.innerHTML = `Заметок: ${book.notes_amount? book.notes_amount : 0}`;
 
-            let card_footer = document.createElement('div');
+            const card_footer = document.createElement('div');
             card_footer.classList.add('card-footer');
 
-            let button = document.createElement('button');
+            const button = document.createElement('button');
             button.classList.add('btn');
-            button.classList.add('btn-success');
+            button.classList.add('btn-outline-success');
             button.innerText = 'Просмотр';
             button.addEventListener('click', () => { window.location.href = `/notes?book_id=${book.id}`; });
             card_footer.appendChild(button);
+
+            const button_delete = document.createElement('button');
+            button_delete.classList.add('btn');
+            button_delete.classList.add('btn-outline-danger');
+            button_delete.classList.add('ms-2');
+            button_delete.classList.add('disabled');
+            button_delete.innerText = 'Удалить';
+            button_delete.addEventListener('click', () => {  });
+            card_footer.appendChild(button_delete);
 
             card.appendChild(card_header);
             card.appendChild(card_body);
             card.appendChild(card_footer);
 
-            books.appendChild(card);
+            return card;
+        }
+
+        create_book_submit.addEventListener('click', async e =>
+        {
+            const title = document.getElementById('create_book_title');
+
+            const response = await make_request(METHOD_CREATE_BOOK, {title: title.value.trim()});
+            const json_response = await response.json();
+
+            if (response.ok && json_response.ok)
+            {
+                no_books_warn.setAttribute(STYLE, DISPLAY_NONE);
+                books.appendChild(create_book_list_item(json_response.result.book));
+            }
+
+            title.value = '';
         });
 
-        form_create_book.addEventListener('submit', async e =>
-        {
-            e.preventDefault();
+        const response = await make_request(METHOD_GET_BOOKS);
 
-            console.debug(e.target);
+        spinner.setAttribute(STYLE, DISPLAY_NONE);
+
+        if (!response.ok)
+        {
+            alert.innerText = `Ошибка HTTP: ${response.status} ${response.statusText}`;
+            alert.removeAttribute(STYLE);
+            return;
+        }
+
+        let json_response;
+        try { json_response = await response.json(); }
+        catch (e)
+        {
+            alert.innerText = 'Ошибка при получении ответа от сервера';
+            alert.removeAttribute(STYLE);
+            return;
+        }
+
+        if (!json_response.ok)
+        {
+            alert.innerText = `Ошибка API: ${json_response.description}`;
+            alert.removeAttribute(STYLE);
+            return;
+        }
+
+        if (json_response.result.books.length <= 0)
+        {
+            no_books_warn.removeAttribute(STYLE);
+            return;
+        }
+
+        json_response.result.books.forEach(book => {
+            books.appendChild(create_book_list_item(book));
         });
     });
 </script>

@@ -17,24 +17,24 @@
 <script>
     document.addEventListener('DOMContentLoaded', async () =>
     {
-        let spinner = document.getElementById('spinner');
+        const spinner = document.getElementById('spinner');
 
-        let card_logged = document.getElementById('card_logged');
-        let card_logged_header = document.getElementById('card_logged_header');
-        let card_logged_body = document.getElementById('card_logged_body');
+        const card_logged = document.getElementById('card_logged');
+        const card_logged_header = document.getElementById('card_logged_header');
+        const card_logged_body = document.getElementById('card_logged_body');
 
-        let card_unlogged = document.getElementById('card_unlogged');
-        let card_unlogged_header = document.getElementById('card_unlogged_header');
-        let card_unlogged_body = document.getElementById('card_unlogged_body');
+        const card_unlogged = document.getElementById('card_unlogged');
+        const card_unlogged_header = document.getElementById('card_unlogged_header');
+        const card_unlogged_body = document.getElementById('card_unlogged_body');
 
         if (sessionStorage.getItem('auth_token'))
         {
-            let id = document.getElementById('id');
-            let username = document.getElementById('username');
-            let first_name = document.getElementById('first_name');
+            const id = document.getElementById('id');
+            const username = document.getElementById('username');
+            const first_name = document.getElementById('first_name');
 
-            let response = await make_request(METHOD_GET_ME);
-            let json_response = await response.json();
+            const response = await make_request(METHOD_GET_ME);
+            const json_response = await response.json();
 
             id.innerText = json_response.result.user.id;
             username.innerText = json_response.result.user.username;
@@ -46,14 +46,14 @@
         }
         else
         {
-            let notes = document.getElementById('notes');
-            let task_lists = document.getElementById('task_lists');
+            const notes = document.getElementById('notes');
+            const task_lists = document.getElementById('task_lists');
 
-            let response = await make_request(METHOD_GET_STATISTICS);
-            let json_response = await response.json();
+            const response = await make_request(METHOD_GET_STATISTICS);
+            const json_response = await response.json();
 
-            let plural = new Intl.PluralRules('ru');
-            let words = [
+            const plural = new Intl.PluralRules('ru');
+            const words = [
                 {one: 'заметка', few: 'заметки', many: 'заметок'},
                 {one: 'список дел', few: 'списка дел', many: 'списков дел'},
             ]

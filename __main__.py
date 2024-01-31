@@ -184,6 +184,8 @@ def get_books(token: dict[str, Any], params: dict[str, Any]) -> Response:
 def create_book(token: dict[str, Any], params: dict[str, Any]) -> Response:
     try:
         title: str = str(params['title'])
+        if not 1 <= len(title) <= 64:
+            raise ValueError
     except KeyError:
         return APIError(HTTP.BadRequest.value, 'not enough arguments')
     except ValueError:

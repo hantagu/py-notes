@@ -22,13 +22,13 @@
 <div class="d-flex justify-content-center mt-4 text-secondary fst-italic">У вас пока ещё нет ни одного списка дел</div>
 
 <script>
-
-    const addTask = (e) =>
+    function addTask(e)
     {
-        let task_input = document.getElementById('add_task_input');
-        let value = task_input.value.trim();
+        const task_input = document.getElementById('add_task_input');
+        const value = task_input.value.trim();
 
-        if (value <= 0) {
+        if (value <= 0)
+        {
             task_input.value = '';
             return;
         }
@@ -41,11 +41,11 @@
         `;
 
         task_input.value = '';
-    };
+    }
 
-    const deleteTask = (e) => {
+    function deleteTask(e)
+    {
         e.parentElement.remove();
-    };
-
+    }
 </script>
 {% endblock %}

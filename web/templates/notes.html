@@ -1,30 +1,88 @@
 {% extends "base.html" %}
 {% block content %}
+<div class="alert alert-danger" id="alert" style="display: none !important;">
+</div>
+
 <div class="card">
     <div class="card-header">Создать новую заметку</div>
-    <form method="post" action="/method/create-note" id="form_create_note">
-        <div class="card-body">
-            <input type="hidden" name="book_id" value="{{book_id}}">
-            <input type="text" class="form-control mb-3" name="title" required placeholder="Заголовок">
-            <textarea type="text" class="form-control" name="text" required placeholder="Текст"></textarea>
-        </div>
-        <div class="card-footer d-flex justify-content-end justify-content-md-start">
-            <input type="submit" class="btn btn-success" value="Создать">
-        </div>
-    </form>
-</div>
-
-<div class="d-flex justify-content-center mt-4 text-secondary fst-italic">В этой записной книжке ещё нет ни одной заметки</div>
-
-<div class="card mt-4">
-    <div class="card-header">note.title</div>
-    <div class="card-body">note.text</div>
-    <div class="card-footer d-flex">
-        <form method="post" action="/method/delete-note">
-            <input type="hidden" name="book_id" value="{{book_id}}">
-            <input type="hidden" name="note_id" value="{{note.id}}">
-            <input type="submit" class="btn btn-outline-danger" value="Удалить">
-        </form>
+    <div class="card-body">
+        <input type="text" class="form-control" id="create_note_title" placeholder="Заголовок">
+        <textarea type="text" class="form-control mt-3" id="create_note_text" placeholder="Текст"></textarea>
+    </div>
+    <div class="card-footer">
+        <button type="button" class="btn btn-outline-success" id="create_note_submit">Создать</button>
     </div>
 </div>
+
+<div class="d-flex justify-content-center mt-4" id="spinner">
+    <div class="spinner-border spinner-border-sm"></div>
+</div>
+
+<div class="d-flex justify-content-center mt-4 text-secondary fst-italic" id="no_notes_warn" style="display: none !important;">
+    В этой записной книжке ещё нет ни одной заметки
+</div>
+
+<div id="notes">
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', async () =>
+    {
+        const create_note_title = document.getElementById('create_note_title');
+        const create_note_text = document.getElementById('create_note_text');
+        const create_note_submit = document.getElementById('create_note_submit');
+
+        const spinner = document.getElementById('spinner');
+        const alert = document.getElementById('alert');
+        const no_notes_warn = document.getElementById('no_notes_warn');
+
+        function create_note_list_item(note)
+        {
+
+        }
+
+        create_note_submit.addEventListener('click', async e =>
+        {
+
+        });
+
+        const urlParams = new URLSearchParams(window.location.search);
+        const response = await make_request(METHOD_GET_NOTES, {book_id: urlParams.get('book_id')});
+
+        spinner.setAttribute(STYLE, DISPLAY_NONE);
+
+        if (!response.ok)
+        {
+            alert.innerText = `Ошибка HTTP: ${response.status} ${response.statusText}`;
+            alert.removeAttribute(STYLE);
+            return;
+        }
+
+        let json_response;
+        try { json_response = await response.json(); }
+        catch (e)
+        {
+            alert.innerText = 'Ошибка при получении ответа от сервера';
+            alert.removeAttribute(STYLE);
+            return;
+        }
+
+        if (!json_response.ok)
+        {
+            alert.innerText = `Ошибка API: ${json_response.description}`;
+            alert.removeAttribute(STYLE);
+            return;
+        }
+
+        if (json_response.result.notes.length <= 0)
+        {
+            no_notes_warn.removeAttribute(STYLE);
+            return;
+        }
+
+        json_response.result.notes.forEach(note => {
+            notes.appendChild(create_note_list_item(note));
+        });
+    });
+</script>
 {% endblock %}
