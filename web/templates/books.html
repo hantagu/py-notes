@@ -2,7 +2,7 @@
 {% block content %}
 <div class="card">
     <div class="card-header">Создать новую записную книжку</div>
-    <form id="form_create_book" onsubmit="document.dispatchEvent(new CustomEvent('create_book', {'detail': this}));">
+    <form id="form_create_book">
         <div class="card-body">
             <input type="text" class="form-control" name="title" id="form_create_book_title" required placeholder="Название">
         </div>
@@ -36,31 +36,52 @@
     document.addEventListener('DOMContentLoaded', async () =>
     {
         let form_create_book = document.getElementById('form_create_book');
+        let books = document.getElementById('books');
 
-        form_create_book.addEventListener('submit', async e =>
-        {
-            e.preventDefault();
-        });
-    });
-
-    document.addEventListener('book_update', async e =>
-    {
         let spinner = document.getElementById('spinner');
         let no_books_warn = document.getElementById('no_books_warn');
-        let books = document.getElementById('books');
 
         let response = await make_request(METHOD_GET_BOOKS);
         let json_response = await response.json();
 
-        json_response.result.books.forEach(book => {});
+        spinner.setAttribute(STYLE, DISPLAY_NONE);
 
-        json_response.result.books.forEach(element =>
+        json_response.result.books.forEach(book =>
         {
             let card = document.createElement('div');
             card.classList.add('card');
+            card.classList.add('mt-4');
 
-            let form = document.createElement('form');
-            form.id = '';
+            let card_header = document.createElement('div');
+            card_header.classList.add('card-header');
+            card_header.innerHTML = book.title;
+
+            let card_body = document.createElement('div');
+            card_body.classList.add('card-body');
+            card_body.innerHTML = `Заметок: ${book.notes_amount}`;
+
+            let card_footer = document.createElement('div');
+            card_footer.classList.add('card-footer');
+
+            let button = document.createElement('button');
+            button.classList.add('btn');
+            button.classList.add('btn-success');
+            button.innerText = 'Просмотр';
+            button.addEventListener('click', () => { window.location.href = `/notes?book_id=${book.id}`; });
+            card_footer.appendChild(button);
+
+            card.appendChild(card_header);
+            card.appendChild(card_body);
+            card.appendChild(card_footer);
+
+            books.appendChild(card);
+        });
+
+        form_create_book.addEventListener('submit', async e =>
+        {
+            e.preventDefault();
+
+            console.debug(e.target);
         });
     });
 </script>
