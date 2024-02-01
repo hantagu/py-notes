@@ -1,23 +1,15 @@
-document.addEventListener('auth', async event =>
+document.addEventListener('auth', event =>
 {
-    let response = await make_request(METHOD_LOGIN, event.detail);
+    const response = make_request(METHOD_LOGIN, event.detail);
 
-    if (!response.ok)
-    {
-        console.error('[auth]', `HTTP Error: ${response.status} ${response.statusText}`);
-        return;
-    }
+    response.then(result => {
+        sessionStorage.setItem('auth_token', result.auth_token);
+        window.location.replace('/');
+    });
 
-    let json_response = await response.json();
-
-    if (!json_response.ok)
-    {
-        console.error('[auth]', `API Error: ${json_response.description}`);
-        return;
-    }
-
-    sessionStorage.setItem('auth_token', json_response.result.auth_token);
-    window.location.replace('/');
+    response.catch(error => {
+        show_alert(error.json? `Ошибка API: ${error.description}` : `Ошибка HTTP: ${error.code} ${error.text}`);
+    });
 });
 
 

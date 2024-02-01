@@ -16,16 +16,31 @@ const METHOD_CREATE_TASK_LIST = 'create_task_list';
 const METHOD_DELETE_TASK_LIST = 'delete_task_list';
 
 
-async function make_request(method, arguments)
+const make_request = (method, args) => new Promise(async (resolve, reject) =>
 {
-    let response = await fetch(`/method/${method}`, {
+    const response = await fetch(`/method/${method}`, {
         method: 'POST',
         headers: {
-            'X-Notes-Auth-Token': method != METHOD_LOGIN? sessionStorage.getItem('auth_token') : null,
-            'Content-Type': 'application/json'
+            'Content-Type': 'application/json',
+            'X-Notes-Auth-Token': method != METHOD_LOGIN? sessionStorage.getItem('auth_token') : null
         },
-        body: JSON.stringify(arguments? arguments : {})
+        body: JSON.stringify(args? args : {})
     });
 
-    return response;
-}
+    let json_response;
+    try {
+        json_response = await response.json();
+    }
+    catch {
+        reject({json: false, code: response.status, text: response.statusText});
+        return;
+    }
+
+    if (!json_response.ok) {
+        reject({json: true, description: json_response.description});
+        return;
+    }
+
+    resolve(json_response.result);
+});
+
