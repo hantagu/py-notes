@@ -84,14 +84,16 @@
             response.catch(error => {
                 show_alert(error.json? `Ошибка API: ${error.description}` : `Ошибка HTTP: ${error.code} ${error.text}`);
             });
+
+            response.finally(() => {
+                spinner.setAttribute(STYLE, DISPLAY_NONE);
+            });
         });
 
         const response = make_request(METHOD_GET_BOOKS);
 
         response.then(result =>
         {
-            spinner.setAttribute(STYLE, DISPLAY_NONE);
-
             if (result.books.length <= 0) {
                 no_books_warn.removeAttribute(STYLE);
                 return;
@@ -104,6 +106,10 @@
 
         response.catch(error => {
             show_alert(error.json? `Ошибка API: ${error.description}` : `Ошибка HTTP: ${error.code} ${error.text}`);
+        });
+
+        response.finally(() => {
+            spinner.setAttribute(STYLE, DISPLAY_NONE);
         });
     });
 </script>

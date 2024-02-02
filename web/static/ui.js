@@ -27,7 +27,7 @@ document.addEventListener('DOMContentLoaded', () =>
     const login = document.getElementById('telegram-login-T6h4dWpVNnbot');
     const logout = document.getElementById('tab_logout');
 
-    if (sessionStorage.getItem('auth_token'))
+    if ('auth_token' in sessionStorage)
     {
         main.removeAttribute(STYLE);
         books.removeAttribute(STYLE);
@@ -64,7 +64,7 @@ document.addEventListener('DOMContentLoaded', () =>
 const show_alert = message =>
 {
     const alert = document.createElement('div');
-    alert.classList.add('alert', 'alert-danger', 'alert-dismissible');
+    alert.classList.add('alert', 'alert-danger', 'alert-dismissible', 'mb-4');
     alert.innerText = message;
 
     const button = document.createElement('button');
@@ -72,6 +72,10 @@ const show_alert = message =>
     button.classList.add('btn-close');
     button.dataset.bsDismiss = 'alert';
     alert.appendChild(button);
+
+    setTimeout(() => {
+        alert.remove();
+    }, 10_000);
 
     document.getElementById('alerts').prepend(alert);
 }

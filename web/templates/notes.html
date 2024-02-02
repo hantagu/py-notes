@@ -81,6 +81,10 @@
             response.catch(error => {
                 show_alert(error.json? `Ошибка API: ${error.description}` : `Ошибка HTTP: ${error.code} ${error.text}`);
             });
+
+            response.finally(() => {
+                spinner.setAttribute(STYLE, DISPLAY_NONE);
+            });
         });
 
         const urlParams = new URLSearchParams(window.location.search);
@@ -88,8 +92,6 @@
 
         response.then(result =>
         {
-            spinner.setAttribute(STYLE, DISPLAY_NONE);
-
             if (result.notes.length <= 0) {
                 no_notes_warn.removeAttribute(STYLE);
                 return;
@@ -102,6 +104,10 @@
 
         response.catch(error => {
             show_alert(error.json? `Ошибка API: ${error.description}` : `Ошибка HTTP: ${error.code} ${error.text}`);
+        });
+
+        response.finally(() => {
+            spinner.setAttribute(STYLE, DISPLAY_NONE);
         });
     });
 </script>

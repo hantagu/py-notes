@@ -70,6 +70,8 @@ def APIRequest(check_token: bool) -> Callable[[Callable[[dict[str, Any]], Respon
                 return APIError(HTTP.Unauthorized.value, 'invalid token signature')
             except jwt.ExpiredSignatureError:
                 return APIError(HTTP.Unauthorized.value, 'token has expired')
+            except jwt.DecodeError:
+                return APIError(HTTP.Unauthorized.value, 'invalid token')
 
             return f(token, params)
 

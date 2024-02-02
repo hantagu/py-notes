@@ -6,7 +6,9 @@
 
 <div class="card" id="card_logged" style="display: none !important;">
     <div class="card-header" id="card_logged_header">Привет, <span id="first_name"></span></div>
-    <div class="card-body" id="card_logged_body">Ник: <span id="username"></span>, ID: <span id="id"></span></div>
+    <div class="card-body" id="card_logged_body">
+        Ник: <span id="username"></span>,<br>
+        ID: <span id="id"></span></div><br>
 </div>
 
 <div class="card" id="card_unlogged" style="display: none !important;">
@@ -28,18 +30,21 @@
 
         const response = make_request(METHOD_GET_ME);
 
-        response.then((result) =>
+        response.then(result =>
         {
             id.innerText = result.user.id;
             username.innerText = result.user.username;
             first_name.innerText = result.user.first_name;
 
-            spinner.setAttribute(STYLE, DISPLAY_NONE);
             card_logged.removeAttribute(STYLE);
         });
 
-        response.catch((e) => {
+        response.catch(error => {
             show_alert(e.json? `Ошибка API: ${e.description}` : `Ошибка HTTP: ${e.code} ${e.text}`);
+        });
+
+        response.finally(() => {
+            spinner.setAttribute(STYLE, DISPLAY_NONE);
         });
     }
 
@@ -66,18 +71,21 @@
             notes.innerText = `${result.statistics.notes} ${words[0][plural.select(result.statistics.notes)]}`;
             task_lists.innerText = `${result.statistics.task_lists} ${words[1][plural.select(result.statistics.task_lists)]}`;
 
-            spinner.setAttribute(STYLE, DISPLAY_NONE);
             card_unlogged.removeAttribute(STYLE);
         });
 
         response.catch(error => {
             show_alert(error.json? `Ошибка API: ${error.description}` : `Ошибка HTTP: ${error.code} ${error.text}`);
         });
+
+        response.finally(() => {
+            spinner.setAttribute(STYLE, DISPLAY_NONE);
+        });
     }
 
     document.addEventListener('DOMContentLoaded', () =>
     {
-        if (sessionStorage.getItem('auth_token'))
+        if ('auth_token' in sessionStorage)
             logged();
         else
             unlogged();

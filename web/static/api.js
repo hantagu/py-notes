@@ -18,12 +18,14 @@ const METHOD_DELETE_TASK_LIST = 'delete_task_list';
 
 const make_request = (method, args) => new Promise(async (resolve, reject) =>
 {
+    const headers = new Headers();
+    headers.set('Content-Type', 'application/json');
+    if ('auth_token' in sessionStorage)
+        headers.set('X-Notes-Auth-Token', sessionStorage.getItem('auth_token'));
+
     const response = await fetch(`/method/${method}`, {
         method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-Notes-Auth-Token': method != METHOD_LOGIN? sessionStorage.getItem('auth_token') : null
-        },
+        headers: headers,
         body: JSON.stringify(args? args : {})
     });
 
