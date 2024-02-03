@@ -23,36 +23,6 @@
 </div>
 
 <script>
-    const create_note_list_item = (note) =>
-    {
-        const card = document.createElement('div');
-        card.id = `note_${note.id}`;
-        card.classList.add('card', 'mt-4');
-
-        const card_header = document.createElement('div');
-        card_header.classList.add('card-header');
-        card_header.innerText = note.title;
-
-        const card_body = document.createElement('div');
-        сard_body.classList.add('card-body');
-        card_body.innerText = note.text;
-
-        const card_footer = document.createElement('div');
-        card_footer.classList.add('card-footer');
-
-        const button_delete = document.createElement('button');
-        button_delete.classList.add('btn', 'btn-outline-danger', 'disabled');
-        button_delete.innerText = 'Удалить';
-        button_delete.addEventListener('click', () => { });
-        card_footer.appendChild(button_delete);
-
-        card.appendChild(card_header);
-        card.appendChild(card_body);
-        card.appendChild(card_footer);
-
-        return card;
-    }
-
     document.addEventListener('DOMContentLoaded', () =>
     {
         const create_note_title = document.getElementById('create_note_title');
@@ -69,46 +39,39 @@
             const title = document.getElementById('create_note_title');
             const text = document.getElementById('create_note_text');
 
-            const response = make_request(METHOD_CREATE_NOTE, {title: title.value.trim(), text: text.value.trim()});
-
-            response.then(result => {
-                no_notes_warn.setAttribute(STYLE, DISPLAY_NONE);
-                notes.appendChild(create_note_list_item(json_response.result.note));
-                title.value = '';
-                text.value = '';
-            });
-
-            response.catch(error => {
-                show_alert(error.json? `Ошибка API: ${error.description}` : `Ошибка HTTP: ${error.code} ${error.text}`);
-            });
-
-            response.finally(() => {
-                spinner.setAttribute(STYLE, DISPLAY_NONE);
-            });
+            make_request(METHOD_CREATE_NOTE, {title: title.value.trim(), text: text.value.trim()})
+                .then(result => {
+                    no_notes_warn.setAttribute(STYLE, DISPLAY_NONE);
+                    notes.appendChild(create_note_list_item(json_response.result.note));
+                    title.value = '';
+                    text.value = '';
+                })
+                .catch(error => {
+                    show_alert(error.json? `Ошибка API: ${error.description}` : `Ошибка HTTP: ${error.code} ${error.text}`);
+                })
+                .finally(() => {
+                    spinner.setAttribute(STYLE, DISPLAY_NONE);
+                });
         });
 
         const urlParams = new URLSearchParams(window.location.search);
-        const response = make_request(METHOD_GET_NOTES, {book_id: urlParams.get('book_id')});
 
-        response.then(result =>
-        {
-            if (result.notes.length <= 0) {
-                no_notes_warn.removeAttribute(STYLE);
-                return;
-            }
-
-            result.notes.forEach(note => {
-                notes.appendChild(create_note_list_item(note));
+        make_request(METHOD_GET_NOTES, {book_id: urlParams.get('book_id')})
+            .then(result => {
+                if (result.notes.length <= 0) {
+                    no_notes_warn.removeAttribute(STYLE);
+                    return;
+                }
+                result.notes.forEach(note => {
+                    notes.appendChild(create_note_list_item(note));
+                });
+            })
+            .catch(error => {
+                show_alert(error.json? `Ошибка API: ${error.description}` : `Ошибка HTTP: ${error.code} ${error.text}`);
+            })
+            .finally(() => {
+                spinner.setAttribute(STYLE, DISPLAY_NONE);
             });
-        });
-
-        response.catch(error => {
-            show_alert(error.json? `Ошибка API: ${error.description}` : `Ошибка HTTP: ${error.code} ${error.text}`);
-        });
-
-        response.finally(() => {
-            spinner.setAttribute(STYLE, DISPLAY_NONE);
-        });
     });
 </script>
 {% endblock %}

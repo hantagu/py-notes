@@ -22,44 +22,6 @@
 </div>
 
 <script>
-    const create_book_list_item = (book) =>
-    {
-        const card = document.createElement('div');
-        card.id = `book_${book.id}`;
-        card.classList.add('card', 'mt-4');
-
-        const card_header = document.createElement('div');
-        card_header.classList.add('card-header');
-        card_header.innerText = book.title;
-
-        const card_body = document.createElement('div');
-        card_body.classList.add('card-body');
-        card_body.innerText = `Заметок: ${book.notes_amount? book.notes_amount : 0}`;
-
-        const card_footer = document.createElement('div');
-        card_footer.classList.add('card-footer');
-
-        const button = document.createElement('button');
-        button.classList.add('btn', 'btn-outline-success');
-        button.innerText = 'Просмотр';
-        button.addEventListener('click', () => {
-            window.location.href = `/notes?book_id=${book.id}`;
-        });
-        card_footer.appendChild(button);
-
-        const button_delete = document.createElement('button');
-        button_delete.classList.add('btn', 'btn-outline-danger', 'ms-2', 'disabled');
-        button_delete.innerText = 'Удалить';
-        button_delete.addEventListener('click', () => { });
-        card_footer.appendChild(button_delete);
-
-        card.appendChild(card_header);
-        card.appendChild(card_body);
-        card.appendChild(card_footer);
-
-        return card;
-    }
-
     document.addEventListener('DOMContentLoaded', () =>
     {
         const create_book_title = document.getElementById('create_book_title');
@@ -73,44 +35,36 @@
         {
             const title = document.getElementById('create_book_title');
 
-            const response = make_request(METHOD_CREATE_BOOK, {title: title.value.trim()});
+            make_request(METHOD_CREATE_BOOK, {title: title.value.trim()})
+                .then(result => {
+                    no_books_warn.setAttribute(STYLE, DISPLAY_NONE);
+                    books.appendChild(create_book_list_item(result.book));
+                    title.value = '';
+                })
+                .catch(error => {
+                    show_alert(error.json? `Ошибка API: ${error.description}` : `Ошибка HTTP: ${error.code} ${error.text}`);
+                })
+                .finally(() => {
+                    spinner.setAttribute(STYLE, DISPLAY_NONE);
+                });
+        });
 
-            response.then(result => {
-                no_books_warn.setAttribute(STYLE, DISPLAY_NONE);
-                books.appendChild(create_book_list_item(result.book));
-                title.value = '';
-            });
-
-            response.catch(error => {
+        make_request(METHOD_GET_BOOKS)
+            .then(result => {
+                if (result.books.length <= 0) {
+                    no_books_warn.removeAttribute(STYLE);
+                    return;
+                }
+                result.books.forEach(book => {
+                    books.appendChild(create_book_list_item(book));
+                });
+            })
+            .catch(error => {
                 show_alert(error.json? `Ошибка API: ${error.description}` : `Ошибка HTTP: ${error.code} ${error.text}`);
-            });
-
-            response.finally(() => {
+            })
+            .finally(() => {
                 spinner.setAttribute(STYLE, DISPLAY_NONE);
             });
-        });
-
-        const response = make_request(METHOD_GET_BOOKS);
-
-        response.then(result =>
-        {
-            if (result.books.length <= 0) {
-                no_books_warn.removeAttribute(STYLE);
-                return;
-            }
-
-            result.books.forEach(book => {
-                books.appendChild(create_book_list_item(book));
-            });
-        });
-
-        response.catch(error => {
-            show_alert(error.json? `Ошибка API: ${error.description}` : `Ошибка HTTP: ${error.code} ${error.text}`);
-        });
-
-        response.finally(() => {
-            spinner.setAttribute(STYLE, DISPLAY_NONE);
-        });
     });
 </script>
 {% endblock %}

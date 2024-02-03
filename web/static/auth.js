@@ -1,15 +1,13 @@
 document.addEventListener('auth', event =>
 {
-    const response = make_request(METHOD_LOGIN, event.detail);
-
-    response.then(result => {
-        sessionStorage.setItem('auth_token', result.auth_token);
-        window.location.replace('/');
-    });
-
-    response.catch(error => {
-        show_alert(error.json? `Ошибка API: ${error.description}` : `Ошибка HTTP: ${error.code} ${error.text}`);
-    });
+    make_request(METHOD_LOGIN, event.detail)
+        .then(result => {
+            sessionStorage.setItem('auth_token', result.auth_token);
+            window.location.replace('/');
+        })
+        .catch(error => {
+            show_alert(error.json? `Ошибка API: ${error.description}` : `Ошибка HTTP: ${error.code} ${error.text}`);
+        });
 });
 
 

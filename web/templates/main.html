@@ -28,24 +28,19 @@
         const username = document.getElementById('username');
         const first_name = document.getElementById('first_name');
 
-        const response = make_request(METHOD_GET_ME);
-
-        response.then(result =>
-        {
-            id.innerText = result.user.id;
-            username.innerText = result.user.username;
-            first_name.innerText = result.user.first_name;
-
-            card_logged.removeAttribute(STYLE);
-        });
-
-        response.catch(error => {
-            show_alert(e.json? `Ошибка API: ${e.description}` : `Ошибка HTTP: ${e.code} ${e.text}`);
-        });
-
-        response.finally(() => {
-            spinner.setAttribute(STYLE, DISPLAY_NONE);
-        });
+        make_request(METHOD_GET_ME)
+            .then(result => {
+                id.innerText = result.user.id;
+                username.innerText = result.user.username;
+                first_name.innerText = result.user.first_name;
+                card_logged.removeAttribute(STYLE);
+            })
+            .catch(error => {
+                show_alert(e.json? `Ошибка API: ${e.description}` : `Ошибка HTTP: ${e.code} ${e.text}`);
+            })
+            .finally(() => {
+                spinner.setAttribute(STYLE, DISPLAY_NONE);
+            });
     }
 
     const unlogged = () =>
@@ -64,23 +59,18 @@
             {one: 'список дел', few: 'списка дел', many: 'списков дел'},
         ];
 
-        const response = make_request(METHOD_GET_STATISTICS);
-
-        response.then(result =>
-        {
-            notes.innerText = `${result.statistics.notes} ${words[0][plural.select(result.statistics.notes)]}`;
-            task_lists.innerText = `${result.statistics.task_lists} ${words[1][plural.select(result.statistics.task_lists)]}`;
-
-            card_unlogged.removeAttribute(STYLE);
-        });
-
-        response.catch(error => {
-            show_alert(error.json? `Ошибка API: ${error.description}` : `Ошибка HTTP: ${error.code} ${error.text}`);
-        });
-
-        response.finally(() => {
-            spinner.setAttribute(STYLE, DISPLAY_NONE);
-        });
+        make_request(METHOD_GET_STATISTICS)
+            .then(result => {
+                notes.innerText = `${result.statistics.notes} ${words[0][plural.select(result.statistics.notes)]}`;
+                task_lists.innerText = `${result.statistics.task_lists} ${words[1][plural.select(result.statistics.task_lists)]}`;
+                card_unlogged.removeAttribute(STYLE);
+            })
+            .catch(error => {
+                show_alert(error.json? `Ошибка API: ${error.description}` : `Ошибка HTTP: ${error.code} ${error.text}`);
+            })
+            .finally(() => {
+                spinner.setAttribute(STYLE, DISPLAY_NONE);
+            });
     }
 
     document.addEventListener('DOMContentLoaded', () =>

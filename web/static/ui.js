@@ -61,6 +61,76 @@ document.addEventListener('DOMContentLoaded', () =>
 });
 
 
+const create_book_list_item = (book) =>
+{
+    const card = document.createElement('div');
+    card.id = `book_${book.id}`;
+    card.classList.add('card', 'mt-4');
+
+    const card_header = document.createElement('div');
+    card_header.classList.add('card-header');
+    card_header.innerText = book.title;
+
+    const card_body = document.createElement('div');
+    card_body.classList.add('card-body');
+    card_body.innerText = `Заметок: ${book.notes_amount? book.notes_amount : 0}`;
+
+    const card_footer = document.createElement('div');
+    card_footer.classList.add('card-footer');
+
+    const button = document.createElement('button');
+    button.classList.add('btn', 'btn-outline-success');
+    button.innerText = 'Просмотр';
+    button.addEventListener('click', () => {
+        window.location.href = `/notes?book_id=${book.id}`;
+    });
+    card_footer.appendChild(button);
+
+    const button_delete = document.createElement('button');
+    button_delete.classList.add('btn', 'btn-outline-danger', 'ms-2', 'disabled');
+    button_delete.innerText = 'Удалить';
+    button_delete.addEventListener('click', () => { });
+    card_footer.appendChild(button_delete);
+
+    card.appendChild(card_header);
+    card.appendChild(card_body);
+    card.appendChild(card_footer);
+
+    return card;
+}
+
+
+const create_note_list_item = (note) =>
+{
+    const card = document.createElement('div');
+    card.id = `note_${note.id}`;
+    card.classList.add('card', 'mt-4');
+
+    const card_header = document.createElement('div');
+    card_header.classList.add('card-header');
+    card_header.innerText = note.title;
+
+    const card_body = document.createElement('div');
+    card_body.classList.add('card-body');
+    card_body.innerText = note.text;
+
+    const card_footer = document.createElement('div');
+    card_footer.classList.add('card-footer');
+
+    const button_delete = document.createElement('button');
+    button_delete.classList.add('btn', 'btn-outline-danger', 'disabled');
+    button_delete.innerText = 'Удалить';
+    button_delete.addEventListener('click', () => { });
+    card_footer.appendChild(button_delete);
+
+    card.appendChild(card_header);
+    card.appendChild(card_body);
+    card.appendChild(card_footer);
+
+    return card;
+}
+
+
 const show_alert = message =>
 {
     const alert = document.createElement('div');
