@@ -3,8 +3,8 @@
 <div class="card">
     <div class="card-header">Создать новую заметку</div>
     <div class="card-body">
-        <input type="text" class="form-control" id="create_note_title" placeholder="Заголовок">
-        <textarea type="text" class="form-control mt-3" id="create_note_text" placeholder="Текст"></textarea>
+        <input type="text" class="form-control" id="create_note_title" maxlength="64" placeholder="Заголовок">
+        <textarea type="text" class="form-control mt-3" id="create_note_text" maxlength="4096" placeholder="Текст"></textarea>
     </div>
     <div class="card-footer">
         <button type="button" class="btn btn-outline-success" id="create_note_submit">Создать</button>

@@ -212,6 +212,7 @@ class DBHelper:
                 WHERE "book_id" = %s AND "id" = %s
                 RETURNING *
             ''', (book_id, note_id))
+            return Note(*result) if (result := cursor.fetchone()) else None
 
 
 

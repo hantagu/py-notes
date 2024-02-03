@@ -132,10 +132,10 @@ def login(params: dict[str, Any]) -> Response:
         id: int = int(params['id'])
         first_name: str = params['first_name']
         auth_date: int = int(params['auth_date'])
-    except KeyError:
-        return APIError(HTTP.BadRequest.value, 'not enough arguments')
     except ValueError:
         return APIError(HTTP.BadRequest.value, 'invalid argument value')
+    except KeyError:
+        return APIError(HTTP.BadRequest.value, 'not enough arguments')
 
     sorted_args = [(k, v) for k, v in sorted(params.items(), key=lambda x: x[0]) if k != 'hash']
     data_check_string = '\n'.join([f'{k}={v}' for k, v in sorted_args])
@@ -188,10 +188,10 @@ def create_book(token: dict[str, Any], params: dict[str, Any]) -> Response:
         title: str = str(params['title'])
         if not 1 <= len(title) <= 64:
             raise ValueError
-    except KeyError:
-        return APIError(HTTP.BadRequest.value, 'not enough arguments')
     except ValueError:
         return APIError(HTTP.BadRequest.value, 'invalid argument value')
+    except KeyError:
+        return APIError(HTTP.BadRequest.value, 'not enough arguments')
 
     try:
         book: Book = database.create_book(int(token['sub']), title)
@@ -205,10 +205,10 @@ def create_book(token: dict[str, Any], params: dict[str, Any]) -> Response:
 def delete_book(token: dict[str, Any], params: dict[str, Any]) -> Response:
     try:
         id: UUID = UUID(params['id'])
-    except KeyError:
-        return APIError(HTTP.BadRequest.value, 'not enough arguments')
     except ValueError:
         return APIError(HTTP.BadRequest.value, 'invalid argument value')
+    except KeyError:
+        return APIError(HTTP.BadRequest.value, 'not enough arguments')
 
     try:
         book: Book | None = database.delete_book(token['sub'], id)
@@ -226,10 +226,10 @@ def delete_book(token: dict[str, Any], params: dict[str, Any]) -> Response:
 def get_notes(token: dict[str, Any], params: dict[str, Any]) -> Response:
     try:
         book_id: UUID = UUID(params['book_id'])
-    except KeyError:
-        return APIError(HTTP.BadRequest.value, 'not enough arguments')
     except ValueError:
         return APIError(HTTP.BadRequest.value, 'invalid argument value')
+    except KeyError:
+        return APIError(HTTP.BadRequest.value, 'not enough arguments')
 
     try:
         notes: list[Note] = database.get_notes(token['sub'], book_id)
@@ -243,13 +243,43 @@ def get_notes(token: dict[str, Any], params: dict[str, Any]) -> Response:
 @app.post(f'/method/{Method.CreateNote.value}')
 @APIRequest(True) # type: ignore
 def create_note(token: dict[str, Any], params: dict[str, Any]) -> Response:
-    return APIError(HTTP.NotImplemented.value, 'not implemented yet')
+    try:
+        book_id: UUID = UUID(params['book_id'])
+        title: str = str(params['title'])
+        text: str = str(params['text'])
+        if not all((1 <= len(title) <= 64, 1 <= len(text) <= 4096)):
+            raise ValueError
+    except ValueError:
+        return APIError(HTTP.BadRequest.value, 'invalid argument value')
+    except KeyError:
+        return APIError(HTTP.BadRequest.value, 'not enough arguments')
+
+    try:
+        note: Note = database.create_note(token['sub'], book_id, title, text)
+        return APIResult({'note': {'id': str(note.id), 'book_id': str(note.book_id), 'title': note.title, 'text': note.text}})
+    except:
+        return APIError(HTTP.InternalServerError.value, 'internal server error')
 
 
 @app.post(f'/method/{Method.DeleteNote.value}')
 @APIRequest(True) # type: ignore
 def delete_note(token: dict[str, Any], params: dict[str, Any]) -> Response:
-    return APIError(HTTP.NotImplemented.value, 'not implemented yet')
+    try:
+        book_id: UUID = UUID(params['book_id'])
+        id: UUID = UUID(params['id'])
+    except ValueError:
+        return APIError(HTTP.BadRequest.value, 'invalid argument value')
+    except KeyError:
+        return APIError(HTTP.BadRequest.value, 'not enough arguments')
+
+    try:
+        note: Note | None = database.delete_note(token['sub'], book_id, id)
+        if note:
+            return APIResult({'note': {'id': str(note.id), 'book_id': str(note.book_id), 'title': note.title, 'text': note.text}})
+        else:
+            return APIError(HTTP.NotFound.value, 'note not found')
+    except:
+        return APIError(HTTP.InternalServerError.value, 'internal server error')
 
 
 @app.post(f'/method/{Method.GetTaskLists.value}')
