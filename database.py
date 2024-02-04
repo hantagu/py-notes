@@ -1,7 +1,5 @@
-from re import A
-import sys
-from uuid import UUID, uuid4
-from datetime import datetime
+from typing import Any
+from uuid import UUID
 
 import psycopg
 
@@ -14,6 +12,14 @@ class User:
         self.first_name: str = first_name
         self.last_name: str | None = last_name
 
+    def to_json(self) -> dict[str, Any]:
+        return {
+            'id': self.id,
+            'username': self.username,
+            'first_name': self.first_name,
+            'last_name': self.last_name
+        }
+
 
 class Book:
 
@@ -21,6 +27,13 @@ class Book:
         self.id: UUID = id
         self.owner_id: int = owner_id
         self.title: str = title
+
+    def to_json(self) -> dict[str, Any]:
+        return {
+            'id': str(self.id),
+            'owner_id': self.owner_id,
+            'title': self.title
+        }
 
 
 class Note:
@@ -31,6 +44,14 @@ class Note:
         self.title: str = title
         self.text: str = text
 
+    def to_json(self) -> dict[str, Any]:
+        return {
+            'id': str(self.id),
+            'book_id': str(self.book_id),
+            'title': self.title,
+            'text': self.text
+        }
+
 
 class TaskList:
 
@@ -38,6 +59,13 @@ class TaskList:
         self.id: UUID = id
         self.owner_id: int = owner_id
         self.title: str = title
+
+    def to_json(self) -> dict[str, Any]:
+        return {
+            'id': str(self.id),
+            'owner_id': self.owner_id,
+            'title': self.title
+        }
 
 
 class Task:
@@ -47,6 +75,14 @@ class Task:
         self.task_list_id: UUID = task_list_id
         self.title: str = title
         self.is_done: bool = is_done
+
+    def to_json(self) -> dict[str, Any]:
+        return {
+            'id': str(self.id),
+            'task_list_id': str(self.task_list_id),
+            'title': self.title,
+            'is_done': self.is_done
+        }
 
 
 class DBHelper:

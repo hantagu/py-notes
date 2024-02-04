@@ -2,12 +2,18 @@
 {% block content %}
 <div class="card">
     <div class="card-header">Создать новую записную книжку</div>
-    <div class="card-body">
-        <input type="text" class="form-control" id="create_book_title" maxlength="64" placeholder="Название">
-    </div>
-    <div class="card-footer">
-        <button type="button" class="btn btn-outline-success" id="create_book_submit">Создать</button>
-    </div>
+    <form id="form" autocomplete="off">
+        <div class="card-body">
+            <div class="form-floating">
+                <input type="text" name="title" class="form-control" id="form_title" minlength="1" maxlength="64" required placeholder="Название">
+                <label id="form_title_label">Название <span id="form_title_counter"></span></label>
+                <div class="invalid-feedback">Название не может быть пустым</div>
+            </div>
+        </div>
+        <div class="card-footer">
+            <input type="submit" class="btn btn-outline-success" id="form_submit" value="Создать">
+        </div>
+    </form>
 </div>
 
 <div class="d-flex justify-content-center mt-4" id="spinner">
@@ -24,22 +30,70 @@
 <script>
     document.addEventListener('DOMContentLoaded', () =>
     {
-        const create_book_title = document.getElementById('create_book_title');
-        const create_book_submit = document.getElementById('create_book_submit');
+        const form = document.getElementById('form');
+        const form_title = document.getElementById('form_title');
+        const form_title_label = document.getElementById('form_title_label');
+        const form_title_counter = document.getElementById('form_title_counter');
+        const form_submit = document.getElementById('form_submit');
+
         const books = document.getElementById('books');
 
         const spinner = document.getElementById('spinner');
         const no_books_warn = document.getElementById('no_books_warn');
 
-        create_book_submit.addEventListener('click', () =>
-        {
-            const title = document.getElementById('create_book_title');
 
-            make_request(METHOD_CREATE_BOOK, {title: title.value.trim()})
+        const on_book_view = (book) => () => {
+            window.location.href = `/notes?book_id=${book.id}`;
+        };
+
+        const on_book_delete = (book) => (card) => () =>
+        {
+            make_request(METHOD_DELETE_BOOK, {id: book.id})
+                .then(result => {
+                    card.remove();
+                    if (books.childElementCount <= 0)
+                        no_books_warn.removeAttribute(STYLE);
+                })
+                .catch(error => {
+                    show_alert(error.json? `Ошибка API: ${error.description}` : `Ошибка HTTP: ${error.code} ${error.text}`);
+                });
+        };
+
+
+        if (form_title.value.length == 0 || form_title.value.length > Number(form_title.value))
+            form_submit.classList.add('disabled');
+
+        form_title.addEventListener('input', () =>
+        {
+            form_title_counter.innerText = `(${form_title.value.length}/${form_title.getAttribute('maxlength')})`
+
+            if (form_title.value.length == 0 || form_title.value.length > 64) {
+                form_submit.classList.add('disabled');
+                form_title.classList.add('is-invalid');
+            } else {
+                form_submit.classList.remove('disabled');
+                form_title.classList.remove('is-invalid');
+            }
+        });
+
+        form_title.addEventListener('focusin', () => {
+            form_title_counter.innerText = `(${form_title.value.length}/${form_title.getAttribute('maxlength')})`
+        });
+
+        form_title.addEventListener('focusout', () => {
+            form_title_counter.innerText = '';
+        });
+
+        form.addEventListener('submit', event =>
+        {
+            event.preventDefault();
+            const form_data = new FormData(event.target);
+
+            make_request(METHOD_CREATE_BOOK, {title: form_data.get('title')})
                 .then(result => {
                     no_books_warn.setAttribute(STYLE, DISPLAY_NONE);
-                    books.appendChild(create_book_list_item(result.book));
-                    title.value = '';
+                    books.append(create_book_list_item(result.book, 0, on_book_view(result.book), on_book_delete(result.book)));
+                    form_title.value = '';
                 })
                 .catch(error => {
                     show_alert(error.json? `Ошибка API: ${error.description}` : `Ошибка HTTP: ${error.code} ${error.text}`);
@@ -49,18 +103,20 @@
                 });
         });
 
+
         make_request(METHOD_GET_BOOKS)
             .then(result => {
-                if (result.books.length <= 0) {
+                if (result.entries.length <= 0) {
                     no_books_warn.removeAttribute(STYLE);
                     return;
                 }
-                result.books.forEach(book => {
-                    books.appendChild(create_book_list_item(book));
+                result.entries.forEach(entry => {
+                    books.append(create_book_list_item(entry[0], entry[1], on_book_view(entry[0]), on_book_delete(entry[0])));
                 });
             })
             .catch(error => {
                 show_alert(error.json? `Ошибка API: ${error.description}` : `Ошибка HTTP: ${error.code} ${error.text}`);
+                form_title.setAttribute('disabled', '');
             })
             .finally(() => {
                 spinner.setAttribute(STYLE, DISPLAY_NONE);

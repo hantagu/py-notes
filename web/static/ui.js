@@ -52,6 +52,7 @@ document.addEventListener('DOMContentLoaded', () =>
             main.firstChild.classList.add('active');
             break;
         case '/books':
+        case '/notes':
             books.firstChild.classList.add('active');
             break;
         case '/task_lists':
@@ -61,10 +62,9 @@ document.addEventListener('DOMContentLoaded', () =>
 });
 
 
-const create_book_list_item = (book) =>
+const create_book_list_item = (book, notes_amount, on_view, on_delete) =>
 {
     const card = document.createElement('div');
-    card.id = `book_${book.id}`;
     card.classList.add('card', 'mt-4');
 
     const card_header = document.createElement('div');
@@ -73,37 +73,34 @@ const create_book_list_item = (book) =>
 
     const card_body = document.createElement('div');
     card_body.classList.add('card-body');
-    card_body.innerText = `Заметок: ${book.notes_amount? book.notes_amount : 0}`;
+    card_body.innerText = `Заметок: ${notes_amount}`;
 
     const card_footer = document.createElement('div');
     card_footer.classList.add('card-footer');
 
-    const button = document.createElement('button');
-    button.classList.add('btn', 'btn-outline-success');
-    button.innerText = 'Просмотр';
-    button.addEventListener('click', () => {
-        window.location.href = `/notes?book_id=${book.id}`;
-    });
-    card_footer.appendChild(button);
+    const button_view = document.createElement('button');
+    button_view.classList.add('btn', 'btn-outline-success');
+    button_view.innerText = 'Просмотр';
+    button_view.addEventListener('click', on_view);
+    card_footer.append(button_view);
 
     const button_delete = document.createElement('button');
-    button_delete.classList.add('btn', 'btn-outline-danger', 'ms-2', 'disabled');
+    button_delete.classList.add('btn', 'btn-outline-danger', 'ms-2');
     button_delete.innerText = 'Удалить';
-    button_delete.addEventListener('click', () => { });
-    card_footer.appendChild(button_delete);
+    button_delete.addEventListener('click', on_delete(card));
+    card_footer.append(button_delete);
 
-    card.appendChild(card_header);
-    card.appendChild(card_body);
-    card.appendChild(card_footer);
+    card.append(card_header);
+    card.append(card_body);
+    card.append(card_footer);
 
     return card;
 }
 
 
-const create_note_list_item = (note) =>
+const create_note_list_item = (note, on_delete) =>
 {
     const card = document.createElement('div');
-    card.id = `note_${note.id}`;
     card.classList.add('card', 'mt-4');
 
     const card_header = document.createElement('div');
@@ -118,14 +115,14 @@ const create_note_list_item = (note) =>
     card_footer.classList.add('card-footer');
 
     const button_delete = document.createElement('button');
-    button_delete.classList.add('btn', 'btn-outline-danger', 'disabled');
+    button_delete.classList.add('btn', 'btn-outline-danger');
     button_delete.innerText = 'Удалить';
-    button_delete.addEventListener('click', () => { });
-    card_footer.appendChild(button_delete);
+    button_delete.addEventListener('click', on_delete(card));
+    card_footer.append(button_delete);
 
-    card.appendChild(card_header);
-    card.appendChild(card_body);
-    card.appendChild(card_footer);
+    card.append(card_header);
+    card.append(card_body);
+    card.append(card_footer);
 
     return card;
 }
@@ -137,11 +134,11 @@ const show_alert = message =>
     alert.classList.add('alert', 'alert-danger', 'alert-dismissible', 'mb-4');
     alert.innerText = message;
 
-    const button = document.createElement('button');
-    button.type = 'button';
-    button.classList.add('btn-close');
-    button.dataset.bsDismiss = 'alert';
-    alert.appendChild(button);
+    const button_close = document.createElement('button');
+    button_close.type = 'button';
+    button_close.classList.add('btn-close');
+    button_close.dataset.bsDismiss = 'alert';
+    alert.append(button_close);
 
     setTimeout(() => {
         alert.remove();

@@ -17,7 +17,7 @@ import psycopg
 from flask import Flask, Response, make_response, render_template, request
 
 from database import DBHelper, User, Book, Note, TaskList, Task, NotExistsException
-from enums import HTTP, Page, Method
+from enums import HTTP, Page, Method, ErrorTexts
 
 
 dotenv.load_dotenv()
@@ -44,7 +44,7 @@ def APIRequest(check_token: bool) -> Callable[[Callable[[dict[str, Any]], Respon
             try:
                 params: dict[str, Any] = json.loads(request.get_data())
             except:
-                return APIError(HTTP.BadRequest.value, 'invalid request format')
+                return APIError(HTTP.BadRequest.value, ErrorTexts.InvalidRequestFormat.value)
             return f(params)
 
         inner.__name__ = f.__name__
@@ -57,21 +57,21 @@ def APIRequest(check_token: bool) -> Callable[[Callable[[dict[str, Any]], Respon
             try:
                 params: dict[str, Any] = json.loads(request.get_data())
             except:
-                return APIError(HTTP.BadRequest.value, 'invalid request format')
+                return APIError(HTTP.BadRequest.value, ErrorTexts.InvalidRequestFormat.value)
 
             try:
                 raw_token: str = request.headers['X-Notes-Auth-Token']
             except:
-                return APIError(HTTP.BadRequest.value, 'X-Notes-Auth-Token header not found')
+                return APIError(HTTP.BadRequest.value, ErrorTexts.AuthenticationHeaderNotFound.value)
 
             try:
                 token: dict[str, Any] = jwt.decode(raw_token, app.secret_key, algorithms=[jwt.get_unverified_header(raw_token)['alg']])
             except jwt.InvalidSignatureError:
-                return APIError(HTTP.Unauthorized.value, 'invalid token signature')
+                return APIError(HTTP.Unauthorized.value, ErrorTexts.InvalidTokenSignature.value)
             except jwt.ExpiredSignatureError:
-                return APIError(HTTP.Unauthorized.value, 'token has expired')
+                return APIError(HTTP.Unauthorized.value, ErrorTexts.TokenHasExpired.value)
             except jwt.DecodeError:
-                return APIError(HTTP.Unauthorized.value, 'invalid token')
+                return APIError(HTTP.Unauthorized.value, ErrorTexts.InvalidToken.value)
 
             return f(token, params)
 
@@ -121,7 +121,7 @@ def get_statistics(_: dict[str, Any]):
     try:
         return APIResult({'statistics': {'notes': database.total_notes_amount(), 'task_lists': database.total_task_lists_amount()}})
     except:
-        return APIError(HTTP.InternalServerError.value, 'failed to get statistics')
+        return APIError(HTTP.InternalServerError.value, ErrorTexts.FailedToGetStatistics.value)
 
 
 @app.post(f'/method/{Method.Login.value}')
@@ -133,20 +133,20 @@ def login(params: dict[str, Any]) -> Response:
         first_name: str = params['first_name']
         auth_date: int = int(params['auth_date'])
     except ValueError:
-        return APIError(HTTP.BadRequest.value, 'invalid argument value')
+        return APIError(HTTP.BadRequest.value, ErrorTexts.InvalidArgumentValue.value)
     except KeyError:
-        return APIError(HTTP.BadRequest.value, 'not enough arguments')
+        return APIError(HTTP.BadRequest.value, ErrorTexts.NotEnoughArguments.value)
 
     sorted_args = [(k, v) for k, v in sorted(params.items(), key=lambda x: x[0]) if k != 'hash']
     data_check_string = '\n'.join([f'{k}={v}' for k, v in sorted_args])
     secret_key = sha256(bot_token.encode()).digest()
 
     if hmac.new(secret_key, data_check_string.encode(), sha256).hexdigest() != hash:
-        return APIError(HTTP.BadRequest.value, 'data is not from Telegram')
+        return APIError(HTTP.BadRequest.value, ErrorTexts.DataIsNotFromTelegram.value)
 
     timestamp = int(time())
     if timestamp - auth_date > 300:
-        return APIError(HTTP.BadRequest.value, 'data is outdated')
+        return APIError(HTTP.BadRequest.value, ErrorTexts.DataIsOutdated.value)
 
     try:
         database.create_user(id, params.get('username', None), first_name, params.get('last_name', None))
@@ -163,21 +163,22 @@ def get_me(token: dict[str, Any], _: dict[str, Any]) -> Response:
     try:
         user: User | None = database.get_user(token['sub'])
         if user:
-            return APIResult({'user': {'id': user.id, 'username': user.username, 'first_name': user.first_name, 'last_name': user.last_name}})
+            return APIResult({'user': user.to_json()})
         else:
-            return APIError(HTTP.NotFound.value, 'user not found')
+            return APIError(HTTP.NotFound.value, ErrorTexts.UserNotFound.value)
     except:
-        return APIError(HTTP.InternalServerError.value, 'internal server error')
+        return APIError(HTTP.InternalServerError.value, ErrorTexts.InternalServerError.value)
 
 
 @app.post(f'/method/{Method.GetBooks.value}')
 @APIRequest(True) # type: ignore
 def get_books(token: dict[str, Any], params: dict[str, Any]) -> Response:
     try:
-        books = database.get_books(token['sub'])
-        return APIResult({'books': [{'id': str(book.id), 'owner_id': book.owner_id, 'title': book.title, 'notes_amount': amount} for book, amount in books]})
-    except:
-        return APIError(HTTP.InternalServerError.value, 'internal server error')
+        books: list[tuple[Book, int]] = database.get_books(token['sub'])
+        return APIResult({'entries': [(book.to_json(), amount) for book, amount in books]})
+    except Exception as e:
+        print(e)
+        return APIError(HTTP.InternalServerError.value, ErrorTexts.InternalServerError.value)
 
 
 
@@ -195,7 +196,7 @@ def create_book(token: dict[str, Any], params: dict[str, Any]) -> Response:
 
     try:
         book: Book = database.create_book(int(token['sub']), title)
-        return APIResult({'book': {'id': str(book.id), 'owner_id': book.owner_id, 'title': book.title}})
+        return APIResult({'book': book.to_json()})
     except:
         return APIError(HTTP.InternalServerError.value, 'internal server error')
 
@@ -213,7 +214,7 @@ def delete_book(token: dict[str, Any], params: dict[str, Any]) -> Response:
     try:
         book: Book | None = database.delete_book(token['sub'], id)
         if book:
-            return APIResult({'book': {'id': str(book.id), 'owner_id': book.owner_id, 'title': book.title}})
+            return APIResult({'book': book.to_json()})
         else:
             return APIError(HTTP.NotFound.value, 'book not found')
     except:
@@ -227,17 +228,17 @@ def get_notes(token: dict[str, Any], params: dict[str, Any]) -> Response:
     try:
         book_id: UUID = UUID(params['book_id'])
     except ValueError:
-        return APIError(HTTP.BadRequest.value, 'invalid argument value')
+        return APIError(HTTP.BadRequest.value, ErrorTexts.InvalidArgumentValue.value)
     except KeyError:
-        return APIError(HTTP.BadRequest.value, 'not enough arguments')
+        return APIError(HTTP.BadRequest.value, ErrorTexts.NotEnoughArguments.value)
 
     try:
         notes: list[Note] = database.get_notes(token['sub'], book_id)
-        return APIResult({'notes': [{'id': str(note.id), 'book_id': str(note.book_id), 'title': note.title, 'text': note.text} for note in notes]})
+        return APIResult({'notes': [note.to_json() for note in notes]})
     except NotExistsException:
-        return APIError(HTTP.NotFound.value, 'book not found')
+        return APIError(HTTP.NotFound.value, ErrorTexts.BookNotFound.value)
     except:
-        return APIError(HTTP.InternalServerError.value, 'internal server error')
+        return APIError(HTTP.InternalServerError.value, ErrorTexts.InternalServerError.value)
 
 
 @app.post(f'/method/{Method.CreateNote.value}')
@@ -250,15 +251,15 @@ def create_note(token: dict[str, Any], params: dict[str, Any]) -> Response:
         if not all((1 <= len(title) <= 64, 1 <= len(text) <= 4096)):
             raise ValueError
     except ValueError:
-        return APIError(HTTP.BadRequest.value, 'invalid argument value')
+        return APIError(HTTP.BadRequest.value, ErrorTexts.InvalidArgumentValue.value)
     except KeyError:
-        return APIError(HTTP.BadRequest.value, 'not enough arguments')
+        return APIError(HTTP.BadRequest.value, ErrorTexts.NotEnoughArguments.value)
 
     try:
         note: Note = database.create_note(token['sub'], book_id, title, text)
-        return APIResult({'note': {'id': str(note.id), 'book_id': str(note.book_id), 'title': note.title, 'text': note.text}})
+        return APIResult({'note': note.to_json()})
     except:
-        return APIError(HTTP.InternalServerError.value, 'internal server error')
+        return APIError(HTTP.InternalServerError.value, ErrorTexts.InternalServerError.value)
 
 
 @app.post(f'/method/{Method.DeleteNote.value}')
@@ -268,36 +269,36 @@ def delete_note(token: dict[str, Any], params: dict[str, Any]) -> Response:
         book_id: UUID = UUID(params['book_id'])
         id: UUID = UUID(params['id'])
     except ValueError:
-        return APIError(HTTP.BadRequest.value, 'invalid argument value')
+        return APIError(HTTP.BadRequest.value, ErrorTexts.InvalidArgumentValue.value)
     except KeyError:
-        return APIError(HTTP.BadRequest.value, 'not enough arguments')
+        return APIError(HTTP.BadRequest.value, ErrorTexts.NotEnoughArguments.value)
 
     try:
         note: Note | None = database.delete_note(token['sub'], book_id, id)
         if note:
-            return APIResult({'note': {'id': str(note.id), 'book_id': str(note.book_id), 'title': note.title, 'text': note.text}})
+            return APIResult({'note': note.to_json()})
         else:
-            return APIError(HTTP.NotFound.value, 'note not found')
+            return APIError(HTTP.NotFound.value, ErrorTexts.NoteNotFound.value)
     except:
-        return APIError(HTTP.InternalServerError.value, 'internal server error')
+        return APIError(HTTP.InternalServerError.value, ErrorTexts.InternalServerError.value)
 
 
 @app.post(f'/method/{Method.GetTaskLists.value}')
 @APIRequest(True) # type: ignore
 def get_task_lists(token: dict[str, Any], params: dict[str, Any]) -> Response:
-    return APIError(HTTP.NotImplemented.value, 'not implemented yet')
+    return APIError(HTTP.NotImplemented.value, ErrorTexts.NotImplementedYet.value)
 
 
 @app.post(f'/method/{Method.CreateTaskList.value}')
 @APIRequest(True) # type: ignore
 def create_task_list(token: dict[str, Any], params: dict[str, Any]) -> Response:
-    return APIError(HTTP.NotImplemented.value, 'not implemented yet')
+    return APIError(HTTP.NotImplemented.value, ErrorTexts.NotImplementedYet.value)
 
 
 @app.post(f'/method/{Method.DeleteTaskList.value}')
 @APIRequest(True) # type: ignore
 def delete_task_list(token: dict[str, Any], params: dict[str, Any]) -> Response:
-    return APIError(HTTP.NotImplemented.value, 'not implemented yet')
+    return APIError(HTTP.NotImplemented.value, ErrorTexts.NotImplementedYet.value)
 
 
 app.run(os.environ['LISTEN_ADDR'], int(os.environ['LISTEN_PORT']), ssl_context=ctx)
