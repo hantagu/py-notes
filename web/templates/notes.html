@@ -16,7 +16,10 @@
             </div>
         </div>
         <div class="card-footer">
-            <input type="submit" class="btn btn-outline-success" id="form_submit" value="Создать">
+            <button type="submit" class="btn btn-outline-success" id="form_submit">
+                Создать
+                <div class="spinner-border spinner-border-sm" id="form_submit_spinner" style="display: none !important;"></div>
+            </button>
         </div>
     </form>
 </div>
@@ -43,6 +46,7 @@
         const form_text_label = document.getElementById('form_text_label');
         const form_text_counter = document.getElementById('form_text_counter');
         const form_submit = document.getElementById('form_submit');
+        const form_submit_spinner = document.getElementById('form_submit_spinner');
 
         const notes = document.getElementById('notes');
 
@@ -119,6 +123,10 @@
         form.addEventListener('submit', event =>
         {
             event.preventDefault();
+
+            form_submit.classList.add('disabled');
+            form_submit_spinner.removeAttribute(STYLE);
+
             const form_data = new FormData(event.target);
 
             make_request(METHOD_CREATE_NOTE, {book_id: urlParams.get('book_id'), title: form_data.get('title').trim(), text: form_data.get('text').trim()})
@@ -133,6 +141,7 @@
                 })
                 .finally(() => {
                     spinner.setAttribute(STYLE, DISPLAY_NONE);
+                    form_submit_spinner.setAttribute(STYLE, DISPLAY_NONE);
                 });
         });
 
