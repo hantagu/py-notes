@@ -64,8 +64,13 @@
         };
 
 
-        if (form_title.value.length == 0 || form_title.value.length > Number(form_title.value))
-            form_submit.classList.add('disabled');
+        const check_inputs = () =>
+        {
+            if (form_title.value.length == 0 || form_title.value.length > Number(form_title.getAttribute('maxlength')))
+                form_submit.classList.add('disabled');
+        };
+
+        check_inputs();
 
         form_title.addEventListener('input', () =>
         {

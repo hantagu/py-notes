@@ -2,50 +2,106 @@
 {% block content %}
 <div class="card">
     <div class="card-header">Создать новый список задач</div>
-    <form method="post" action="/method/create-task-list">
+    <form id="form" autocomplete="off">
         <div class="card-body">
-            <input type="text" class="form-control" name="title" required placeholder="Название">
-            <div class="input-group mt-3">
-                <input type="button" class="btn btn-outline-success" onclick="addTask(this)" value="+">
-                <input type="text" class="form-control" id="add_task_input" placeholder="Новая задача...">
+            <div class="form-floating">
+                <input type="text" name="title" class="form-control" id="form_title" minlength="1" maxlength="64" required placeholder="Название">
+                <label id="form_title_label">Название <span id="form_title_counter"></span></label>
+                <div class="invalid-feedback">Название не может быть пустым</div>
             </div>
-            <hr class="mb-0">
-            <div id="tasks">
+            <div class="input-group mt-3">
+                <button type="button" class="btn btn-outline-success" id="form_button_add_task">+</button>
+                <input type="text" class="form-control" id="form_input_add_task" placeholder="Новая задача...">
+            </div>
+            <div id="form_tasks">
             </div>
         </div>
-        <div class="card-footer d-flex justify-content-end justify-content-md-start">
-            <input type="submit" class="btn btn-success" value="Создать">
+        <div class="card-footer">
+            <button type="submit" class="btn btn-outline-success" id="form_submit">
+                Создать
+                <div class="spinner-border spinner-border-sm" id="form_submit_spinner" style="display: none !important;"></div>
+            </button>
         </div>
     </form>
 </div>
 
-<div class="d-flex justify-content-center mt-4 text-secondary fst-italic">У вас пока ещё нет ни одного списка дел</div>
+<div class="d-flex justify-content-center mt-4" id="spinner">
+    <div class="spinner-border spinner-border-sm"></div>
+</div>
+
+<div class="d-flex justify-content-center mt-4 text-secondary fst-italic" id="no_task_lists_warn" style="display: none !important;">
+    У вас пока ещё нет ни одного списка дел
+</div>
+
+<div id="task_lists">
+</div>
 
 <script>
-    function addTask(e)
+    document.addEventListener('DOMContentLoaded', () =>
     {
-        const task_input = document.getElementById('add_task_input');
-        const value = task_input.value.trim();
+        const form = document.getElementById('form');
+        const form_title = document.getElementById('form_title');
+        const form_title_label = document.getElementById('form_title_label');
+        const form_title_counter = document.getElementById('form_title_counter');
 
-        if (value <= 0)
+        const form_input_add_task = document.getElementById('form_input_add_task');
+        const form_button_add_task = document.getElementById('form_button_add_task');
+        const form_tasks = document.getElementById('form_tasks');
+
+        const form_submit = document.getElementById('form_submit');
+        const form_submit_spinner = document.getElementById('form_submit_spinner');
+
+        const check_inputs = () =>
         {
-            task_input.value = '';
-            return;
-        }
+            if (form_title.value.length == 0 || form_title.value.length > Number(form_title.getAttribute('maxlength')) || form_tasks.childElementCount == 0)
+                form_submit.classList.add('disabled');
+            else
+                form_submit.classList.remove('disabled');
+        };
 
-        document.getElementById('tasks').innerHTML += `
-            <div class="input-group mt-3">
-                <input type="text" class="form-control" name="task" value="${value}" readonly>
-                <input type="button" class="btn btn-outline-danger" onclick="deleteTask(this)" value="-">
-            </div>
-        `;
+        check_inputs();
 
-        task_input.value = '';
-    }
+        form_title.addEventListener('input', () =>
+        {
+            form_title_counter.innerText = `(${form_title.value.length}/${form_title.getAttribute('maxlength')})`;
 
-    function deleteTask(e)
-    {
-        e.parentElement.remove();
-    }
+            if (form_title.value.length == 0 || form_title.value.length > Number(form_title.getAttribute('maxlength')))
+                form_title.classList.add('is-invalid');
+            else
+                form_title.classList.remove('is-invalid');
+
+            check_inputs();
+        });
+
+        form_title.addEventListener('focusin', () => {
+            form_title_counter.innerText = `(${form_title.value.length}/${form_title.getAttribute('maxlength')})`
+        });
+
+        form_title.addEventListener('focusout', () => {
+            form_title_counter.innerText = '';
+        });
+
+        form_button_add_task.addEventListener('click', () =>
+        {
+            const value = form_input_add_task.value.trim();
+
+            if (value.length <= 0) {
+                form_input_add_task.value = '';
+                return;
+            }
+
+            form_tasks.append(create_form_task(value, check_inputs));
+
+            check_inputs();
+            form_input_add_task.value = '';
+        });
+
+        form.addEventListener('submit', event =>
+        {
+            event.preventDefault();
+
+            const form_data = new FormData(event.target);
+        });
+    });
 </script>
 {% endblock %}

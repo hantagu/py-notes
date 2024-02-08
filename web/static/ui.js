@@ -62,6 +62,26 @@ document.addEventListener('DOMContentLoaded', () =>
 });
 
 
+const show_alert = message =>
+{
+    const alert = document.createElement('div');
+    alert.classList.add('alert', 'alert-danger', 'alert-dismissible', 'mb-4');
+    alert.innerText = message;
+
+    const button_close = document.createElement('button');
+    button_close.type = 'button';
+    button_close.classList.add('btn-close');
+    button_close.dataset.bsDismiss = 'alert';
+    alert.append(button_close);
+
+    setTimeout(() => {
+        alert.remove();
+    }, 10_000);
+
+    document.getElementById('alerts').prepend(alert);
+}
+
+
 const create_book_list_item = (book, notes_amount, on_view, on_delete) =>
 {
     const card = document.createElement('div');
@@ -128,21 +148,29 @@ const create_note_list_item = (note, on_delete) =>
 }
 
 
-const show_alert = message =>
+const create_form_task = (value, on_remove) =>
 {
-    const alert = document.createElement('div');
-    alert.classList.add('alert', 'alert-danger', 'alert-dismissible', 'mb-4');
-    alert.innerText = message;
+    const div = document.createElement('div');
+    div.classList.add('input-group', 'mt-3');
 
-    const button_close = document.createElement('button');
-    button_close.type = 'button';
-    button_close.classList.add('btn-close');
-    button_close.dataset.bsDismiss = 'alert';
-    alert.append(button_close);
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.classList.add('form-control');
+    input.name = 'task';
+    input.value = value;
+    input.setAttribute('readonly', '');
 
-    setTimeout(() => {
-        alert.remove();
-    }, 10_000);
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.classList.add('btn', 'btn-outline-danger');
+    button.innerText = '-';
+    button.addEventListener('click', event => {
+        event.target.parentElement.remove();
+        on_remove();
+    });
 
-    document.getElementById('alerts').prepend(alert);
+    div.append(input);
+    div.append(button);
+
+    return div;
 }
