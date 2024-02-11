@@ -61,7 +61,7 @@
             make_request(METHOD_DELETE_NOTE, {book_id: note.book_id, id: note.id})
                 .then(result => {
                     card.remove();
-                    if (notes.childElementCount <= 0)
+                    if (notes.childElementCount == 0)
                         no_notes_warn.removeAttribute(STYLE);
                 })
                 .catch(error => {

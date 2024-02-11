@@ -285,12 +285,14 @@ class DBHelper:
             _tasklist: TaskList = TaskList(*cursor.fetchone()) # type: ignore
 
         with self.__database.cursor() as cursor:
-            cursor.executemany(f'''
-                INSERT INTO "{DBHelper.__TABLE_TASKS}" ("task_list_id", "text", "is_done")
-                VALUES (%s, %s, %s)
-                RETURNING *
-            ''', [(_tasklist.id, task) for task in tasks])
-            _tasks: list[Task] = [Task(*task) for task in cursor.fetchall()]
+            _tasks: list[Task] = []
+            for task_list_id, text, is_done in ((_tasklist.id, task, False) for task in tasks):
+                cursor.execute(f'''
+                    INSERT INTO "{DBHelper.__TABLE_TASKS}" ("task_list_id", "text", "is_done")
+                    VALUES (%s, %s, %s)
+                    RETURNING *
+                ''', (task_list_id, text, is_done))
+                _tasks.append(Task(*cursor.fetchone())) # type: ignore
 
         return _tasklist, _tasks
 

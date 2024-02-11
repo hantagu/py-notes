@@ -51,6 +51,12 @@
         const form_submit = document.getElementById('form_submit');
         const form_submit_spinner = document.getElementById('form_submit_spinner');
 
+        const spinner = document.getElementById('spinner');
+        const no_task_lists_warn = document.getElementById('no_task_lists_warn');
+
+        const task_lists = document.getElementById('task_lists');
+
+
         const check_inputs = () =>
         {
             if (form_title.value.length == 0 || form_title.value.length > Number(form_title.getAttribute('maxlength')) || form_tasks.childElementCount == 0)
@@ -60,6 +66,7 @@
         };
 
         check_inputs();
+
 
         form_title.addEventListener('input', () =>
         {
@@ -85,7 +92,7 @@
         {
             const value = form_input_add_task.value.trim();
 
-            if (value.length <= 0) {
+            if (value.length == 0) {
                 form_input_add_task.value = '';
                 return;
             }
@@ -100,8 +107,46 @@
         {
             event.preventDefault();
 
+            form_submit.classList.add('disabled');
+            form_submit_spinner.removeAttribute(STYLE);
+
             const form_data = new FormData(event.target);
+
+            make_request(METHOD_CREATE_TASK_LIST, {title: form_data.get('title'), tasks: form_data.getAll('task')})
+                .then(result => {
+                    no_task_lists_warn.setAttribute(STYLE, DISPLAY_NONE);
+                    task_lists_warn
+                    form_title.value = '';
+                })
+                .catch(error => {
+                    show_alert(error.json? `Ошибка API: ${error.description}` : `Ошибка HTTP: ${error.code} ${error.text}`);
+                })
+                .finally(() => {
+                    spinner.setAttribute(STYLE, DISPLAY_NONE);
+                    form_submit_spinner.setAttribute(STYLE, DISPLAY_NONE);
+                });
         });
+
+
+        make_request(METHOD_GET_TASK_LISTS)
+            .then(result => {
+                if (result.entries.length == 0) {
+                    no_task_lists_warn.removeAttribute(STYLE);
+                    return;
+                }
+                result.entries.forEach(entry => {
+                    task_lists.append(create_task_list_list_item(entry, () => {}));
+                });
+            })
+            .catch(error => {
+                show_alert(error.json? `Ошибка API: ${error.description}` : `Ошибка HTTP: ${error.code} ${error.text}`);
+                form_title.setAttribute('disabled', '');
+                form_input_add_task.setAttribute('disabled', '');
+                form_button_add_task.setAttribute('disabled', '');
+            })
+            .finally(() => {
+                spinner.setAttribute(STYLE, DISPLAY_NONE);
+            });
     });
 </script>
 {% endblock %}

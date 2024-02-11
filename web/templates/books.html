@@ -55,7 +55,7 @@
             make_request(METHOD_DELETE_BOOK, {id: book.id})
                 .then(result => {
                     card.remove();
-                    if (books.childElementCount <= 0)
+                    if (books.childElementCount == 0)
                         no_books_warn.removeAttribute(STYLE);
                 })
                 .catch(error => {
@@ -120,7 +120,7 @@
 
         make_request(METHOD_GET_BOOKS)
             .then(result => {
-                if (result.entries.length <= 0) {
+                if (result.entries.length == 0) {
                     no_books_warn.removeAttribute(STYLE);
                     return;
                 }

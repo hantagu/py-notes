@@ -174,3 +174,26 @@ const create_form_task = (value, on_remove) =>
 
     return div;
 }
+
+
+const create_task_list_list_item = (entry, on_remove) =>
+{
+    const card = document.createElement('div');
+    card.classList.add('card','mt-4');
+
+    const card_header = document.createElement('div');
+    card_header.classList.add('card-header');
+    card_header.innerText = entry[0].title;
+
+    const card_body = document.createElement('div');
+    card_body.classList.add('card-body');
+    card_body.innerText = entry[1].length;
+
+    const card_footer = document.createElement('div');
+    card_footer.classList.add('card-footer');
+    card_footer.innerText = '...';
+
+    card.append(card_header, card_body, card_footer);
+
+    return card;
+}

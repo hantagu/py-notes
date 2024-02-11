@@ -172,12 +172,11 @@ def get_me(token: dict[str, Any], _: dict[str, Any]) -> Response:
 
 @app.post(f'/method/{Method.GetBooks.value}')
 @APIRequest(True) # type: ignore
-def get_books(token: dict[str, Any], params: dict[str, Any]) -> Response:
+def get_books(token: dict[str, Any], _: dict[str, Any]) -> Response:
     try:
         books: list[tuple[Book, int]] = database.get_books(token['sub'])
         return APIResult({'entries': [(book.to_json(), amount) for book, amount in books]})
-    except Exception as e:
-        print(e)
+    except:
         return APIError(HTTP.InternalServerError.value, ErrorTexts.InternalServerError.value)
 
 
@@ -286,13 +285,31 @@ def delete_note(token: dict[str, Any], params: dict[str, Any]) -> Response:
 @app.post(f'/method/{Method.GetTaskLists.value}')
 @APIRequest(True) # type: ignore
 def get_task_lists(token: dict[str, Any], params: dict[str, Any]) -> Response:
-    return APIError(HTTP.NotImplemented.value, ErrorTexts.NotImplementedYet.value)
+    try:
+        task_lists: list[tuple[TaskList, list[Task]]] = database.get_task_lists(token['sub'])
+        return APIResult({'entries': [(task_list.to_json(), [task.to_json() for task in tasks]) for task_list, tasks in task_lists]})
+    except:
+        return APIError(HTTP.InternalServerError.value, ErrorTexts.InternalServerError.value)
 
 
 @app.post(f'/method/{Method.CreateTaskList.value}')
 @APIRequest(True) # type: ignore
 def create_task_list(token: dict[str, Any], params: dict[str, Any]) -> Response:
-    return APIError(HTTP.NotImplemented.value, ErrorTexts.NotImplementedYet.value)
+    try:
+        title: str = str(params['title'])
+        tasks: list[str] = params['tasks']
+        if not 1 <= len(title) <= 64 or not all((1 <= len(i) <= 64) for i in tasks):
+            raise ValueError
+    except ValueError:
+        return APIError(HTTP.BadRequest.value, ErrorTexts.InvalidArgumentValue.value)
+    except KeyError:
+        return APIError(HTTP.BadRequest.value, ErrorTexts.NotEnoughArguments.value)
+
+    try:
+        task_list: tuple[TaskList, list[Task]] = database.create_task_list(token['sub'], title, tasks)
+        return APIResult({'task_list': task_list[0].to_json(), 'tasks': [i.to_json() for i in task_list[1]]})
+    except:
+        return APIError(HTTP.InternalServerError.value, ErrorTexts.InternalServerError.value)
 
 
 @app.post(f'/method/{Method.DeleteTaskList.value}')
@@ -301,4 +318,4 @@ def delete_task_list(token: dict[str, Any], params: dict[str, Any]) -> Response:
     return APIError(HTTP.NotImplemented.value, ErrorTexts.NotImplementedYet.value)
 
 
-app.run(os.environ['LISTEN_ADDR'], int(os.environ['LISTEN_PORT']), ssl_context=ctx)
+app.run(os.environ['LISTEN_ADDR'], int(os.environ['LISTEN_PORT']), ssl_context=ctx, debug=True)
