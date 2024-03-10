@@ -1,0 +1,24 @@
+services:
+
+    db:
+        image: "postgres:alpine"
+        ports:
+            - "127.0.0.1:5432:5432"
+            - "[::1]:5432:5432"
+        environment:
+            POSTGRES_USER: "postgres"
+            POSTGRES_PASSWORD: "qazxswedc"
+            POSTGRES_DB: "notes"
+            POSTGRES_INITDB_ARGS: "--locale-provider=icu --icu-locale=ru-RU"
+            LANG: "ru_RU.utf8"
+        volumes:
+            - pgdata:/var/lib/postgresql/data
+
+    adminer:
+        image: adminer
+        ports:
+            - "127.0.0.1:8000:8080"
+            - "[::1]:8000:8080"
+
+volumes:
+    pgdata:

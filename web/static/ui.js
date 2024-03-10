@@ -183,15 +183,20 @@ const create_task_list_list_item = (entry, on_remove) =>
 
     const card_header = document.createElement('div');
     card_header.classList.add('card-header');
-    card_header.innerText = entry[0].title;
+    card_header.innerText = entry.task_list.title;
 
     const card_body = document.createElement('div');
     card_body.classList.add('card-body');
-    card_body.innerText = entry[1].length;
+    card_body.innerText = entry.tasks.length;
 
     const card_footer = document.createElement('div');
     card_footer.classList.add('card-footer');
-    card_footer.innerText = '...';
+
+    const button_delete = document.createElement('button');
+    button_delete.classList.add('btn', 'btn-outline-danger');
+    button_delete.innerText = 'Удалить';
+    button_delete.addEventListener('click', on_remove(card));
+    card_footer.append(button_delete);
 
     card.append(card_header, card_body, card_footer);
 

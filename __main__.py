@@ -287,7 +287,7 @@ def delete_note(token: dict[str, Any], params: dict[str, Any]) -> Response:
 def get_task_lists(token: dict[str, Any], params: dict[str, Any]) -> Response:
     try:
         task_lists: list[tuple[TaskList, list[Task]]] = database.get_task_lists(token['sub'])
-        return APIResult({'entries': [(task_list.to_json(), [task.to_json() for task in tasks]) for task_list, tasks in task_lists]})
+        return APIResult({'entries': [{'task_list': task_list.to_json(), 'tasks': [task.to_json() for task in tasks]} for task_list, tasks in task_lists]})
     except:
         return APIError(HTTP.InternalServerError.value, ErrorTexts.InternalServerError.value)
 
