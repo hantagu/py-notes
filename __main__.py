@@ -153,7 +153,7 @@ def login(params: dict[str, Any]) -> Response:
     except psycopg.errors.UniqueViolation:
         pass
 
-    auth_token = jwt.encode({'iss': 'https://91.215.155.252:443/', 'sub': id, 'iat': timestamp, 'exp': timestamp+86400}, app.secret_key)
+    auth_token = jwt.encode({'sub': id, 'iat': timestamp, 'exp': timestamp+86400}, app.secret_key)
     return APIResult({'auth_token': auth_token})
 
 

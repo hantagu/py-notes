@@ -186,8 +186,16 @@ const create_task_list_list_item = (entry, on_remove) =>
     card_header.innerText = entry.task_list.title;
 
     const card_body = document.createElement('div');
-    card_body.classList.add('card-body');
-    card_body.innerText = entry.tasks.length;
+    card_body.classList.add('card-body', 'p-0');
+
+    const list = document.createElement('div');
+    list.classList.add('list-group', 'list-group-flush');
+
+    entry.tasks.forEach(element => {
+        list.innerHTML += `<div class="list-group-item">${element.title}</div>`;
+    });
+
+    card_body.append(list);
 
     const card_footer = document.createElement('div');
     card_footer.classList.add('card-footer');

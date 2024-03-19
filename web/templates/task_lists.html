@@ -117,7 +117,7 @@
                     no_task_lists_warn.setAttribute(STYLE, DISPLAY_NONE);
                     form_title.value = '';
                     form_tasks.replaceChildren();
-                    task_lists.append(create_task_list_list_item(result));
+                    task_lists.append(create_task_list_list_item(result, () => {}));
                 })
                 .catch(error => {
                     show_alert(error.json? `Ошибка API: ${error.description}` : `Ошибка HTTP: ${error.code} ${error.text}`);
