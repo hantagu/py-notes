@@ -85,7 +85,7 @@ const show_alert = message =>
 const create_book_list_item = (book, notes_amount, on_view, on_delete) =>
 {
     const card = document.createElement('div');
-    card.classList.add('card', 'mt-4');
+    card.classList.add('card', 'my-4');
 
     const card_header = document.createElement('div');
     card_header.classList.add('card-header');
@@ -121,7 +121,7 @@ const create_book_list_item = (book, notes_amount, on_view, on_delete) =>
 const create_note_list_item = (note, on_delete) =>
 {
     const card = document.createElement('div');
-    card.classList.add('card', 'mt-4');
+    card.classList.add('card', 'my-4');
 
     const card_header = document.createElement('div');
     card_header.classList.add('card-header');
@@ -151,7 +151,7 @@ const create_note_list_item = (note, on_delete) =>
 const create_form_task = (value, on_remove) =>
 {
     const div = document.createElement('div');
-    div.classList.add('input-group', 'mt-3');
+    div.classList.add('input-group', 'my-3');
 
     const input = document.createElement('input');
     input.type = 'text';
@@ -179,7 +179,7 @@ const create_form_task = (value, on_remove) =>
 const create_task_list_list_item = (entry, on_remove) =>
 {
     const card = document.createElement('div');
-    card.classList.add('card','mt-4');
+    card.classList.add('card','my-4');
 
     const card_header = document.createElement('div');
     card_header.classList.add('card-header');

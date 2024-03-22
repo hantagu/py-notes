@@ -57,6 +57,22 @@
         const task_lists = document.getElementById('task_lists');
 
 
+        const on_task_list_delete = (task_list) => (card) => () =>
+        {
+            console.log(task_list);
+            make_request(METHOD_DELETE_TASK_LIST, {id: task_list.id})
+                .then(result => {
+                    card.remove();
+                    if (task_lists.childElementCount == 0) {
+                        no_task_lists_warn.removeAttribute(STYLE);
+                    }
+                })
+                .catch(error => {
+                    show_alert(error.json? `Ошибка API: ${error.description}` : `Ошибка HTTP: ${error.code} ${error.text}`);
+                });
+        }
+
+
         const check_inputs = () =>
         {
             if (form_title.value.length == 0 || form_title.value.length > Number(form_title.getAttribute('maxlength')) || form_tasks.childElementCount == 0)
@@ -117,7 +133,7 @@
                     no_task_lists_warn.setAttribute(STYLE, DISPLAY_NONE);
                     form_title.value = '';
                     form_tasks.replaceChildren();
-                    task_lists.append(create_task_list_list_item(result, () => {}));
+                    task_lists.append(create_task_list_list_item(result, on_task_list_delete(result.task_list)));
                 })
                 .catch(error => {
                     show_alert(error.json? `Ошибка API: ${error.description}` : `Ошибка HTTP: ${error.code} ${error.text}`);
@@ -136,7 +152,7 @@
                     return;
                 }
                 result.entries.forEach(entry => {
-                    task_lists.append(create_task_list_list_item(entry, () => {}));
+                    task_lists.append(create_task_list_list_item(entry, on_task_list_delete(entry.task_list)));
                 });
             })
             .catch(error => {

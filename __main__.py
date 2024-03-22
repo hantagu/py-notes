@@ -315,7 +315,21 @@ def create_task_list(token: dict[str, Any], params: dict[str, Any]) -> Response:
 @app.post(f'/method/{Method.DeleteTaskList.value}')
 @APIRequest(True) # type: ignore
 def delete_task_list(token: dict[str, Any], params: dict[str, Any]) -> Response:
-    return APIError(HTTP.NotImplemented.value, ErrorTexts.NotImplementedYet.value)
+    try:
+        id: UUID = UUID(params['id'])
+    except ValueError:
+        return APIError(HTTP.BadRequest.value, 'invalid argument value')
+    except KeyError:
+        return APIError(HTTP.BadRequest.value, 'not enough arguments')
+
+    try:
+        task_list: TaskList | None = database.delete_task_list(token['sub'], id)
+        if task_list:
+            return APIResult({'task_list': task_list.to_json()})
+        else:
+            return APIError(HTTP.NotFound.value, 'task_list not found')
+    except:
+        return APIError(HTTP.InternalServerError.value, 'internal server error')
 
 
 app.run(os.environ['LISTEN_ADDR'], int(os.environ['LISTEN_PORT']), ssl_context=ctx, debug=True)
